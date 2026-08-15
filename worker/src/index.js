@@ -63,7 +63,7 @@ export default {
           }
         }
 
-        return json({ token: genToken(), parent_id: parentId, email, name });
+        return json({ token: genToken(), parent_id: parentId, email, name, subscription_status: "inactive" });
       }
 
       if (path === "/api/login" && request.method === "POST") {
@@ -102,6 +102,19 @@ export default {
           .bind(parent_id)
           .all();
         return json({ profiles: results });
+      }
+
+      if (path.startsWith("/api/child-profiles/") && request.method === "PUT") {
+        const id = path.split("/").pop();
+        const { parent_id, name, age, avatar } = await request.json();
+        if (!parent_id || !name || !age) return json({ error: "parent_id, name, age diperlukan" }, 400);
+        const chosenAvatar = AVATARS.includes(avatar) ? avatar : "panda";
+        const existing = await db.prepare("SELECT id FROM child_profiles WHERE id = ? AND parent_id = ?").bind(id, parent_id).first();
+        if (!existing) return json({ error: "Profil anak tidak dijumpai" }, 404);
+        await db.prepare("UPDATE child_profiles SET name = ?, age = ?, avatar = ? WHERE id = ? AND parent_id = ?")
+          .bind(name, age, chosenAvatar, id, parent_id)
+          .run();
+        return json({ updated: true, id: Number(id), name, age, avatar: chosenAvatar });
       }
 
       if (path.startsWith("/api/child-profiles/") && request.method === "DELETE") {
@@ -192,7 +205,7 @@ export default {
 
         await db
           .prepare("UPDATE parents SET subscription_status = 'active', subscription_plan = ? WHERE id = ?")
-          .bind(plan || "monthly", parent_id)
+          .bind(plan || "lifetime", parent_id)
           .run();
 
         if (agent_code) {
@@ -226,4 +239,3 @@ export default {
     }
   },
 };
-
