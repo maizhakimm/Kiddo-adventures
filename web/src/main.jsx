@@ -1,11 +1,9 @@
-import React,{useEffect,useMemo,useState}from'react';
+import React,{useEffect,useState}from'react';
 import{createRoot}from'react-dom/client';
 import'./styles.css';
 
 const API='';
-const PRICE=39;
-const PROMO=29;
-const COMMISSION=10;
+const PRICE=29;
 const AVATARS=[
   {id:'panda',icon:'🐼',label:'Panda'},
   {id:'kucing',icon:'🐱',label:'Kucing'},
@@ -23,7 +21,6 @@ const worldMeta={
   jigsaw:{icon:'🧸',world:'Pulau Puzzle',tag:'Visual • Ruang • Sabar',tone:'yellow'},
   kira_asas:{icon:'➕',world:'Gunung Kira',tag:'Tambah • Tolak • Logik',tone:'rose'}
 };
-const stages=['Explore','Practice','Challenge','Mastery','Boss'];
 
 async function api(path,options={}){
   const r=await fetch(`${API}${path}`,{headers:{'Content-Type':'application/json',...(options.headers||{})},...options});
@@ -33,66 +30,162 @@ async function api(path,options={}){
 }
 
 function Modal({title,onClose,children,wide=false}){
-  return <div className="overlay" onMouseDown={e=>e.target===e.currentTarget&&onClose()}><div className={`modal ${wide?'wide':''}`}><button className="x" onClick={onClose}>×</button><h2>{title}</h2>{children}</div></div>
+  return <div className="overlay" onMouseDown={e=>e.target===e.currentTarget&&onClose()}>
+    <div className={`modal ${wide?'wide':''}`}>
+      <button className="x" onClick={onClose}>×</button>
+      <h2>{title}</h2>
+      {children}
+    </div>
+  </div>;
 }
 
 function AuthModal({onClose,onLogin,refCode}){
   const[mode,setMode]=useState('login');
   const[form,setForm]=useState({email:'',password:'',name:'',agent_code:refCode||''});
   const[busy,setBusy]=useState(false);const[msg,setMsg]=useState('');
-  async function submit(e){e.preventDefault();setBusy(true);setMsg('');try{const path=mode==='login'?'/api/login':'/api/signup';const d=await api(path,{method:'POST',body:JSON.stringify(form)});localStorage.setItem('kiddo_parent',JSON.stringify(d));onLogin(d)}catch(err){setMsg(err.message)}finally{setBusy(false)}}
-  return <Modal title={mode==='login'?'Ruang Ibu Bapa':'Daftar Akaun Ibu Bapa'} onClose={onClose}><div className="switch"><button className={mode==='login'?'active':''} onClick={()=>setMode('login')}>Log Masuk</button><button className={mode==='signup'?'active':''} onClick={()=>setMode('signup')}>Daftar</button></div><form className="form" onSubmit={submit}>{mode==='signup'&&<input required placeholder="Nama ibu / bapa" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/>}<input type="email" required placeholder="Email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})}/><input type="password" required minLength="6" placeholder="Password" value={form.password} onChange={e=>setForm({...form,password:e.target.value})}/>{mode==='signup'&&<input placeholder="Kod agent (jika ada)" value={form.agent_code} onChange={e=>setForm({...form,agent_code:e.target.value.toUpperCase()})}/>} {msg&&<div className="alert">{msg}</div>}<button className="primary" disabled={busy}>{busy?'Tunggu…':mode==='login'?'Masuk':'Cipta Akaun'}</button></form></Modal>
+  async function submit(e){
+    e.preventDefault();setBusy(true);setMsg('');
+    try{
+      const path=mode==='login'?'/api/login':'/api/signup';
+      const d=await api(path,{method:'POST',body:JSON.stringify(form)});
+      localStorage.setItem('kiddo_parent',JSON.stringify(d));
+      onLogin(d);
+    }catch(err){setMsg(err.message)}finally{setBusy(false)}
+  }
+  return <Modal title={mode==='login'?'Log Masuk Ibu Bapa':'Daftar Akaun Ibu Bapa'} onClose={onClose}>
+    <div className="switch">
+      <button className={mode==='login'?'active':''} onClick={()=>setMode('login')}>Log Masuk</button>
+      <button className={mode==='signup'?'active':''} onClick={()=>setMode('signup')}>Daftar</button>
+    </div>
+    <form className="form" onSubmit={submit}>
+      {mode==='signup'&&<input required placeholder="Nama ibu / bapa" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/>}      
+      <input type="email" required placeholder="Email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})}/>
+      <input type="password" required minLength="6" placeholder="Password" value={form.password} onChange={e=>setForm({...form,password:e.target.value})}/>
+      {mode==='signup'&&<input placeholder="Kod agent (jika ada)" value={form.agent_code} onChange={e=>setForm({...form,agent_code:e.target.value.toUpperCase()})}/>}      
+      {msg&&<div className="alert">{msg}</div>}
+      <button className="primary" disabled={busy}>{busy?'Tunggu…':mode==='login'?'Masuk':'Cipta Akaun'}</button>
+    </form>
+  </Modal>;
 }
 
-function ProfileEditor({parent,profile,onClose,onSaved,onDeleted}){
+function ProfileEditor({parent,profile,onClose,onSaved}){
   const isEdit=!!profile;
   const[form,setForm]=useState({name:profile?.name||'',age:String(profile?.age||''),avatar:profile?.avatar||'panda'});
   const[msg,setMsg]=useState('');const[busy,setBusy]=useState(false);
-  async function save(e){e.preventDefault();setBusy(true);setMsg('');try{const body={...form,parent_id:parent.parent_id||parent.id,age:Number(form.age)};if(isEdit){await api(`/api/child-profiles/${profile.id}`,{method:'PUT',body:JSON.stringify(body)})}else{await api('/api/child-profiles',{method:'POST',body:JSON.stringify(body)})}await onSaved();onClose()}catch(err){setMsg(err.message)}finally{setBusy(false)}}
-  async function remove(){if(!confirm(`Buang profil ${profile.name}? Progress profil ini juga akan dipadam.`))return;setBusy(true);try{await api(`/api/child-profiles/${profile.id}`,{method:'DELETE'});await onDeleted?.(profile);await onSaved();onClose()}catch(err){setMsg(err.message)}finally{setBusy(false)}}
-  return <Modal title={isEdit?'Edit Profil Anak':'Tambah Profil Anak'} onClose={onClose}><form className="form" onSubmit={save}><input required placeholder="Nama anak" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/><select required value={form.age} onChange={e=>setForm({...form,age:e.target.value})}><option value="">Pilih umur</option>{[3,4,5,6,7].map(age=><option key={age} value={age}>{age} tahun</option>)}</select><div className="avatarLabel">Pilih avatar</div><div className="avatars">{AVATARS.map(a=><button type="button" title={a.label} className={`avatarBtn ${form.avatar===a.id?'active':''}`} key={a.id} onClick={()=>setForm({...form,avatar:a.id})}>{a.icon}</button>)}</div>{msg&&<div className="alert">{msg}</div>}<button className="primary" disabled={busy}>{busy?'Tunggu…':isEdit?'Simpan Perubahan':'Tambah Profil'}</button>{isEdit&&<button type="button" className="dangerBtn" onClick={remove} disabled={busy}>Buang Profil</button>}</form></Modal>
+  async function save(e){
+    e.preventDefault();setBusy(true);setMsg('');
+    try{
+      const body={...form,parent_id:parent.parent_id||parent.id,age:Number(form.age)};
+      if(isEdit)await api(`/api/child-profiles/${profile.id}`,{method:'PUT',body:JSON.stringify(body)});
+      else await api('/api/child-profiles',{method:'POST',body:JSON.stringify(body)});
+      await onSaved();onClose();
+    }catch(err){setMsg(err.message)}finally{setBusy(false)}
+  }
+  async function remove(){
+    if(!confirm(`Buang profil ${profile.name}? Progress profil ini juga akan dipadam.`))return;
+    setBusy(true);setMsg('');
+    try{await api(`/api/child-profiles/${profile.id}`,{method:'DELETE'});await onSaved();onClose()}catch(err){setMsg(err.message)}finally{setBusy(false)}
+  }
+  return <Modal title={isEdit?'Edit Profil Anak':'Tambah Profil Anak'} onClose={onClose}>
+    <form className="form" onSubmit={save}>
+      <input required placeholder="Nama anak" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/>
+      <select required value={form.age} onChange={e=>setForm({...form,age:e.target.value})}>
+        <option value="">Pilih umur</option>{[3,4,5,6,7].map(age=><option key={age} value={age}>{age} tahun</option>)}
+      </select>
+      <div className="avatarLabel">Pilih avatar</div>
+      <div className="avatars">{AVATARS.map(a=><button type="button" key={a.id} className={`avatarBtn ${form.avatar===a.id?'active':''}`} onClick={()=>setForm({...form,avatar:a.id})}>{a.icon}</button>)}</div>
+      {msg&&<div className="alert">{msg}</div>}
+      <button className="primary" disabled={busy}>{busy?'Tunggu…':isEdit?'Simpan Perubahan':'Tambah Profil'}</button>
+      {isEdit&&<button type="button" className="dangerBtn" disabled={busy} onClick={remove}>Buang Profil</button>}
+    </form>
+  </Modal>;
 }
 
 function MissionMap({game,child,onClose}){
   const meta=worldMeta[game.game_key]||{};
-  const missions=useMemo(()=>Array.from({length:Math.min(12,game.total_levels)},(_,i)=>({n:i+1,stage:stages[Math.min(4,Math.floor(i/3))],locked:i>0})),[game]);
-  async function startMission(m){if(m.locked)return;try{await api('/api/progress',{method:'POST',body:JSON.stringify({child_id:child.id,game_key:game.game_key,level_reached:m.n,stars:0})})}catch{}alert(`${child.name} mula Mission ${m.n}: ${m.stage}\n\nAktiviti game sebenar akan disambungkan pada step seterusnya.`)}
-  return <Modal title={`${meta.world||game.name_ms} • ${child.name}`} onClose={onClose} wide><div className={`worldBanner ${meta.tone}`}><div className="worldIcon">{meta.icon}</div><div><span className="eyebrow">ADVENTURE WORLD</span><h3>{game.name_ms}</h3><p>{meta.tag} • Explore → Practice → Challenge → Mastery → Boss</p></div></div><div className="trail">{missions.map((m,i)=><React.Fragment key={m.n}><button className={`node ${m.locked?'locked':''} ${m.stage==='Boss'?'boss':''}`} onClick={()=>startMission(m)}><small>{m.stage}</small><b>{m.stage==='Boss'?'👑':m.n}</b><span>{m.locked?'🔒':'▶'}</span></button>{i<missions.length-1&&<div className="path">•••</div>}</React.Fragment>)}</div><div className="mapNote"><b>Difficulty flow:</b> Explore → Practice → Challenge → Mastery → Boss. Mission pertama boleh dibuka sekarang; kandungan game sebenar kita sambung selepas dashboard flow stabil.</div></Modal>
+  const missions=Array.from({length:Math.min(12,game.total_levels)},(_,i)=>i+1);
+  return <Modal title={`${meta.world||game.name_ms} • ${child.name}`} onClose={onClose} wide>
+    <div className={`worldBanner ${meta.tone}`}><div className="worldIcon">{meta.icon}</div><div><span className="eyebrow">ADVENTURE WORLD</span><h3>{game.name_ms}</h3><p>{meta.tag}</p></div></div>
+    <div className="trail">{missions.map((n,i)=><React.Fragment key={n}><button className={`node ${i>0?'locked':''}`} onClick={()=>i===0&&alert(`Mission ${n} untuk ${child.name}`)}><small>{i===0?'Explore':'Locked'}</small><b>{n}</b><span>{i===0?'▶':'🔒'}</span></button>{i<missions.length-1&&<div className="path">•••</div>}</React.Fragment>)}</div>
+  </Modal>;
 }
 
-function ParentDashboard({parent,games,onLogout,onHome}){
-  const[profiles,setProfiles]=useState([]);const[loading,setLoading]=useState(true);const[selected,setSelected]=useState(null);const[editor,setEditor]=useState(null);const[world,setWorld]=useState(null);
-  async function load(){setLoading(true);try{const d=await api(`/api/child-profiles?parent_id=${parent.parent_id||parent.id}`);setProfiles(d.profiles||[]);if(selected){const fresh=(d.profiles||[]).find(p=>p.id===selected.id);if(fresh)setSelected(fresh)}}finally{setLoading(false)}}
+function ParentDashboard({parent,games,onLogout}){
+  const[profiles,setProfiles]=useState([]);const[loading,setLoading]=useState(true);
+  const[selected,setSelected]=useState(null);const[editor,setEditor]=useState(null);const[world,setWorld]=useState(null);
+  async function load(){
+    setLoading(true);
+    try{
+      const d=await api(`/api/child-profiles?parent_id=${parent.parent_id||parent.id}`);
+      setProfiles(d.profiles||[]);
+      if(selected){const fresh=(d.profiles||[]).find(p=>p.id===selected.id);setSelected(fresh||null)}
+    }finally{setLoading(false)}
+  }
   useEffect(()=>{load()},[]);
-  function deleted(p){if(selected?.id===p.id)setSelected(null)}
-  return <div className="dashboardShell"><header className="dashHeader"><button className="brand" onClick={onHome}><span>🎈</span><b>Kiddo Adventures</b></button><div className="dashActions"><span>Hai, {parent.name||'Ibu Bapa'} 👋</span><button className="ghost mini" onClick={()=>setSelected(null)}>Tukar Profil</button><button className="ghost mini" onClick={onLogout}>Log keluar</button></div></header><main className="dashboardMain">{!selected?<section className="profileStage"><div className="profileHeading"><span className="eyebrow">RUANG KELUARGA</span><h1>Siapa nak main?</h1><p>Pilih profil anak. Macam Netflix — setiap anak ada progress dan adventure sendiri.</p></div>{loading?<div className="state">Memuat profil…</div>:<div className="profileGrid">{profiles.map(p=><div className="profileTile" key={p.id}><button className="profilePick" onClick={()=>setSelected(p)}><span>{avatarIcon(p.avatar)}</span><b>{p.name}</b><small>{p.age} tahun</small><em>Masuk Adventure →</em></button><button className="profileEdit" aria-label={`Edit ${p.name}`} onClick={()=>setEditor(p)}>✏️</button></div>)}{profiles.length<5&&<button className="profileAdd" onClick={()=>setEditor('new')}><span>＋</span><b>Tambah Anak</b><small>Maksimum 5 profil</small></button>}</div>}</section>:<><section className="kidHero"><div className="kidHeroIdentity"><div className="kidBigAvatar">{avatarIcon(selected.avatar)}</div><div><span className="eyebrow">PROFIL AKTIF</span><h1>Jom main, {selected.name}!</h1><p>{selected.age} tahun • Pilih dunia untuk sambung adventure.</p></div></div><div className="kidHeroActions"><button className="ghost" onClick={()=>setEditor(selected)}>✏️ Edit Profil</button><button className="ghost" onClick={()=>setSelected(null)}>Tukar Anak</button></div></section><section className="dashWorlds"><div className="dashSectionTitle"><div><span className="eyebrow">PILIH DUNIA</span><h2>Adventure {selected.name}</h2></div><span className="statusPill">Progress disimpan automatik</span></div><div className="worldGrid dashGrid">{games.map((g,i)=>{const m=worldMeta[g.game_key]||{};return <button className={`worldCard ${m.tone}`} key={g.id} onClick={()=>setWorld(g)}><span className="worldNo">0{i+1}</span><div className="worldEmoji">{m.icon||'🎮'}</div><span className="age">UMUR {g.min_age}–{g.max_age}</span><h3>{m.world||g.name_ms}</h3><p>{m.tag||g.name_en}</p><div className="worldFoot"><span>{g.total_levels} mission</span><b>▶ Main</b></div></button>})}</div></section></>}</section></main>{editor&&<ProfileEditor parent={parent} profile={editor==='new'?null:editor} onClose={()=>setEditor(null)} onSaved={load} onDeleted={deleted}/>} {world&&selected&&<MissionMap game={world} child={selected} onClose={()=>setWorld(null)}/>}</div>
+  return <div className="dashboardShell">
+    <header className="dashHeader">
+      <button className="brand" onClick={()=>setSelected(null)}><span>🎈</span><b>Kiddo Adventures</b></button>
+      <div className="dashActions">
+        <span>Hai, {parent.name||'Ibu Bapa'} 👋</span>
+        {selected&&<button className="ghost mini" onClick={()=>setSelected(null)}>Tukar Profil</button>}
+        <button className="ghost mini logoutBtn" onClick={onLogout}>Log keluar</button>
+      </div>
+    </header>
+    <main className="dashboardMain">
+      {!selected?
+        <section className="profileStage">
+          <div className="profileHeading"><span className="eyebrow">RUANG KELUARGA</span><h1>Siapa nak main?</h1><p>Pilih profil anak. Setiap anak ada progress dan adventure sendiri.</p></div>
+          {loading?<div className="state">Memuat profil…</div>:<div className="profileGrid">
+            {profiles.map(p=><div className="profileTile" key={p.id}>
+              <button className="profilePick" onClick={()=>setSelected(p)}><span>{avatarIcon(p.avatar)}</span><b>{p.name}</b><small>{p.age} tahun</small><em>Masuk Adventure →</em></button>
+              <button className="profileEdit" onClick={()=>setEditor(p)}>✏️</button>
+            </div>)}
+            {profiles.length<5&&<button className="profileAdd" onClick={()=>setEditor('new')}><span>＋</span><b>Tambah Anak</b><small>Maksimum 5 profil</small></button>}
+          </div>}
+        </section>
+      :<>
+        <section className="kidHero">
+          <div className="kidHeroIdentity"><div className="kidBigAvatar">{avatarIcon(selected.avatar)}</div><div><span className="eyebrow">PROFIL AKTIF</span><h1>Jom main, {selected.name}!</h1><p>{selected.age} tahun • Pilih dunia untuk sambung adventure.</p></div></div>
+          <div className="kidHeroActions"><button className="ghost" onClick={()=>setEditor(selected)}>✏️ Edit Profil</button><button className="ghost" onClick={()=>setSelected(null)}>Tukar Anak</button></div>
+        </section>
+        <section className="dashWorlds"><div className="dashSectionTitle"><div><span className="eyebrow">PILIH DUNIA</span><h2>Adventure {selected.name}</h2></div><span className="statusPill">Progress disimpan automatik</span></div>
+          <div className="worldGrid dashGrid">{games.map((g,i)=>{const m=worldMeta[g.game_key]||{};return <button className={`worldCard ${m.tone}`} key={g.id} onClick={()=>setWorld(g)}><span className="worldNo">0{i+1}</span><div className="worldEmoji">{m.icon||'🎮'}</div><span className="age">UMUR {g.min_age}–{g.max_age}</span><h3>{m.world||g.name_ms}</h3><p>{m.tag||g.name_en}</p><div className="worldFoot"><span>{g.total_levels} mission</span><b>▶ Main</b></div></button>})}</div>
+        </section>
+      </>}
+    </main>
+    {editor&&<ProfileEditor parent={parent} profile={editor==='new'?null:editor} onClose={()=>setEditor(null)} onSaved={load}/>}    
+    {world&&selected&&<MissionMap game={world} child={selected} onClose={()=>setWorld(null)}/>}  
+  </div>;
 }
 
 function AgentModal({onClose}){
-  const[step,setStep]=useState('join');const[form,setForm]=useState({name:'',email:'',phone:'',bank_name:'',bank_account:''});const[code,setCode]=useState('');const[data,setData]=useState(null);const[msg,setMsg]=useState('');
-  async function join(e){e.preventDefault();setMsg('');try{const d=await api('/api/agents',{method:'POST',body:JSON.stringify(form)});setCode(d.agent_code);setStep('success')}catch(err){setMsg(err.message)}}
-  async function dashboard(e){e.preventDefault();setMsg('');try{const d=await api(`/api/agents/${encodeURIComponent(code)}/dashboard`);setData(d);setStep('dashboard')}catch(err){setMsg(err.message)}}
-  const link=code?`${location.origin}/?ref=${encodeURIComponent(code)}`:'';
-  return <Modal title="Kiddo Partner" onClose={onClose} wide><div className="agentHero"><div><span className="eyebrow">PROGRAM AFFILIATE</span><h3>Share Kiddo. Jana RM{COMMISSION} setiap jualan.</h3><p>Daftar percuma, dapat link unik dan kongsi kepada parent.</p></div><div className="earn">10 jualan <b>RM100</b></div></div>{step==='join'&&<><div className="switch"><button className="active">Daftar Agent</button><button onClick={()=>setStep('lookup')}>Semak Dashboard</button></div><form className="form two" onSubmit={join}><input required placeholder="Nama" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/><input required type="email" placeholder="Email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})}/><input placeholder="Telefon" value={form.phone} onChange={e=>setForm({...form,phone:e.target.value})}/><input placeholder="Bank" value={form.bank_name} onChange={e=>setForm({...form,bank_name:e.target.value})}/><input className="span2" placeholder="No. akaun bank" value={form.bank_account} onChange={e=>setForm({...form,bank_account:e.target.value})}/>{msg&&<div className="alert span2">{msg}</div>}<button className="primary span2">Daftar & Dapat Link</button></form></>}{step==='lookup'&&<form className="form" onSubmit={dashboard}><input required placeholder="Kod agent contoh KIDDO-AMY1234" value={code} onChange={e=>setCode(e.target.value.toUpperCase())}/>{msg&&<div className="alert">{msg}</div>}<button className="primary">Buka Dashboard</button></form>}{step==='success'&&<div className="success"><div className="bigIcon">🎉</div><h3>Kod agent anda</h3><div className="codeBox">{code}</div><p>Link referral:</p><div className="linkBox">{link}</div><button className="primary" onClick={()=>navigator.clipboard?.writeText(link)}>Salin Link</button></div>}{step==='dashboard'&&data&&<div><div className="statGrid"><div><small>Referral</small><b>{data.summary.total_referrals}</b></div><div><small>Jumlah Komisen</small><b>RM{Number(data.summary.total_earned||0).toFixed(2)}</b></div><div><small>Pending</small><b>RM{Number(data.summary.total_pending||0).toFixed(2)}</b></div></div><div className="codeBox">{data.agent.agent_code}</div></div>}</Modal>
+  const[form,setForm]=useState({name:'',email:'',phone:'',bank_name:'',bank_account:''});const[msg,setMsg]=useState('');const[done,setDone]=useState(null);
+  async function submit(e){e.preventDefault();setMsg('');try{setDone(await api('/api/agents',{method:'POST',body:JSON.stringify(form)}))}catch(err){setMsg(err.message)}}
+  return <Modal title="Jadi Agent Kiddo" onClose={onClose}>{done?<div className="success"><h3>Berjaya 🎉</h3><div className="codeBox">{done.agent_code}</div><p>Simpan kod ini untuk semak dashboard agent.</p></div>:<form className="form" onSubmit={submit}><input required placeholder="Nama" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/><input required type="email" placeholder="Email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})}/><input placeholder="Telefon" value={form.phone} onChange={e=>setForm({...form,phone:e.target.value})}/><input placeholder="Bank" value={form.bank_name} onChange={e=>setForm({...form,bank_name:e.target.value})}/><input placeholder="No. akaun bank" value={form.bank_account} onChange={e=>setForm({...form,bank_account:e.target.value})}/>{msg&&<div className="alert">{msg}</div>}<button className="primary">Daftar Agent</button></form>}</Modal>;
 }
 
-function Checkout({onClose,refCode,onLogin,parent}){
-  const[code,setCode]=useState(refCode||'');const[valid,setValid]=useState(null);const[msg,setMsg]=useState('');
-  async function verify(){if(!code){setValid(null);return}try{await api(`/api/agents/${encodeURIComponent(code)}/dashboard`);setValid(true);setMsg('Kod agent sah ✓')}catch{setValid(false);setMsg('Kod agent tidak dijumpai')}}
-  return <Modal title="Buka Kiddo Adventures" onClose={onClose}><div className="priceCard"><span>SEKALI BAYAR • LIFETIME ACCESS</span><div className="price"><s>RM{PRICE}</s><b>RM{PROMO}</b></div><p>Launch price untuk akses semua dunia pembelajaran.</p></div><div className="benefits"><span>✓ 6 dunia permainan</span><span>✓ Adventure map & progress</span><span>✓ Sehingga 5 profil anak</span><span>✓ Tiada caj bulanan</span></div><label className="label">Kod agent / referral</label><div className="verify"><input placeholder="KIDDO-XXXX" value={code} onChange={e=>{setCode(e.target.value.toUpperCase());setValid(null);setMsg('')}}/><button onClick={verify}>Semak</button></div>{msg&&<div className={valid===false?'alert':'ok'}>{msg}</div>}{!parent?<button className="primary" onClick={()=>{onClose();onLogin()}}>Daftar / Log masuk untuk membeli</button>:<button className="primary" onClick={()=>alert('Payment gateway belum disambungkan. Akses tidak akan diaktifkan tanpa bayaran sebenar.')}>Teruskan Pembelian RM{PROMO}</button>}<small className="fine">Akses hanya akan aktif selepas transaksi pembayaran berjaya.</small></Modal>
-}
-
-function Landing({parent,onOpenAuth,onOpenDashboard,onOpenAgent,onOpenCheckout,games,loading,refCode}){
-  return <main><header><button className="brand" onClick={()=>scrollTo({top:0,behavior:'smooth'})}><span>🎈</span><b>Kiddo Adventures</b></button><nav><button onClick={()=>document.getElementById('worlds')?.scrollIntoView({behavior:'smooth'})}>Dunia</button><button onClick={onOpenAgent}>Jadi Agent</button>{parent?<button className="parent" onClick={onOpenDashboard}>👨‍👩‍👧 Dashboard</button>:<button className="parent" onClick={onOpenAuth}>Log Masuk</button>}</nav></header><section className="hero"><div className="heroCopy"><span className="pill">BELAJAR • MAIN • TEROKA</span><h1>Bukan sekadar level.<br/><em>Satu dunia untuk diteroka.</em></h1><p>Kiddo Adventures menukar pembelajaran awal menjadi pengembaraan dengan mission, bintang, treasure dan cabaran yang semakin berkembang.</p><div className="heroActions"><button className="cta" onClick={onOpenCheckout}>Buka Semua Dunia • RM{PROMO}</button><button className="ghost" onClick={()=>document.getElementById('worlds')?.scrollIntoView({behavior:'smooth'})}>Lihat Dunia ↓</button></div><div className="trust"><span>✓ Sekali bayar</span><span>✓ Lifetime access</span><span>✓ Umur 3–7</span></div>{refCode&&<div className="refBadge">🎟️ Referral: <b>{refCode}</b></div>}</div><div className="storybook"><div className="cloud">☁️</div><div className="planet">🌈</div><div className="rocket">🚀</div><div className="star s1">⭐</div><div className="star s2">✨</div><div className="island">🏝️</div><div className="heroLabel">Adventure starts here</div></div></section><section className="journey"><div><span>01</span><b>Explore</b><small>Kenal konsep</small></div><i>→</i><div><span>02</span><b>Practice</b><small>Cuba & ulang</small></div><i>→</i><div><span>03</span><b>Challenge</b><small>Campur kemahiran</small></div><i>→</i><div><span>04</span><b>Mastery</b><small>Buktikan faham</small></div><i>→</i><div><span>👑</span><b>Boss</b><small>Unlock dunia</small></div></section><section id="worlds" className="worlds"><div className="sectionTitle"><span>PILIH PENGEMBARAAN</span><h2>6 dunia. Setiap satu rasa berbeza.</h2><p>Selepas login, setiap anak masuk dashboard sendiri untuk pilih dunia dan simpan progress.</p></div>{loading?<div className="state">Membuka peta…</div>:<div className="worldGrid">{games.map((g,i)=>{const m=worldMeta[g.game_key]||{};return <button className={`worldCard ${m.tone}`} key={g.id} onClick={parent?onOpenDashboard:onOpenAuth}><span className="worldNo">0{i+1}</span><div className="worldEmoji">{m.icon||'🎮'}</div><span className="age">UMUR {g.min_age}–{g.max_age}</span><h3>{m.world||g.name_ms}</h3><p>{m.tag||g.name_en}</p><div className="worldFoot"><span>{g.total_levels} mission</span><b>{parent?'▶ Main':'Log masuk →'}</b></div></button>})}</div>}</section><section className="value"><div><span className="eyebrow">ONE-TIME PURCHASE</span><h2>Sekali beli. Anak boleh kembali bermain bila-bila.</h2><p>Tiada subscription bulanan. Launch price RM{PROMO}, harga biasa RM{PRICE}.</p><button className="cta" onClick={onOpenCheckout}>Dapatkan Kiddo • RM{PROMO}</button></div><div className="ticket"><small>KIDDO PASS</small><b>RM{PROMO}</b><span>Lifetime Access</span><i>6 Worlds • 5 Child Profiles</i></div></section><section className="partner"><div><span className="eyebrow">KIDDO PARTNER</span><h2>Suka Kiddo? Kongsi dan jana pendapatan.</h2><p>Setiap agent dapat referral link sendiri. Setiap pembelian berjaya melalui link atau kod agent memberi komisen RM{COMMISSION}.</p><button className="ghost dark" onClick={onOpenAgent}>Daftar Agent Percuma →</button></div><div className="partnerNumbers"><div><b>RM{COMMISSION}</b><span>/ successful sale</span></div><div><b>RM100</b><span>contoh 10 sales</span></div></div></section><footer><div><b>🎈 Kiddo Adventures</b><span>Play. Learn. Discover.</span></div></footer></main>
+function Landing({onLogin,onAgent,onBuy}){
+  return <main>
+    <header><button className="brand"><span>🎈</span><b>Kiddo Adventures</b></button><nav><button onClick={onAgent}>Jadi Agent</button><button className="parent" onClick={onLogin}>Log Masuk</button></nav></header>
+    <section className="hero"><div className="heroCopy"><span className="pill">BELAJAR • MAIN • TEROKA</span><h1>Bukan sekadar level.<br/><em>Satu dunia untuk diteroka.</em></h1><p>Kiddo Adventures menukar pembelajaran awal menjadi pengembaraan dengan mission, bintang, treasure dan cabaran yang semakin berkembang.</p><div className="heroActions"><button className="cta" onClick={onBuy}>Buka Semua Dunia • RM{PRICE}</button></div><div className="trust"><span>✓ Sekali bayar</span><span>✓ Lifetime access</span><span>✓ Umur 3–7</span></div></div><div className="storybook"><div className="planet">🌈</div><div className="rocket">🚀</div><div className="cloud">☁️</div><div className="island">🏝️</div></div></section>
+  </main>;
 }
 
 function App(){
-  const[games,setGames]=useState([]);const[loading,setLoading]=useState(true);const[modal,setModal]=useState(null);const[parent,setParent]=useState(()=>{try{return JSON.parse(localStorage.getItem('kiddo_parent'))}catch{return null}});const[view,setView]=useState(()=>{try{return localStorage.getItem('kiddo_parent')?'dashboard':'landing'}catch{return'landing'}});const[refCode,setRefCode]=useState(()=>localStorage.getItem('kiddo_ref')||'');
-  useEffect(()=>{const ref=new URLSearchParams(location.search).get('ref');if(ref){localStorage.setItem('kiddo_ref',ref.toUpperCase());setRefCode(ref.toUpperCase())}api('/api/games').then(d=>setGames(d.games||[])).finally(()=>setLoading(false))},[]);
-  function loginSuccess(d){setParent(d);setModal(null);setView('dashboard')}
-  function logout(){localStorage.removeItem('kiddo_parent');setParent(null);setModal(null);setView('landing')}
-  if(parent&&view==='dashboard')return <ParentDashboard parent={parent} games={games} onLogout={logout} onHome={()=>setView('landing')}/>;
-  return <><Landing parent={parent} games={games} loading={loading} refCode={refCode} onOpenAuth={()=>setModal('auth')} onOpenDashboard={()=>setView('dashboard')} onOpenAgent={()=>setModal('agent')} onOpenCheckout={()=>setModal('checkout')}/>{modal==='auth'&&<AuthModal onClose={()=>setModal(null)} refCode={refCode} onLogin={loginSuccess}/>} {modal==='agent'&&<AgentModal onClose={()=>setModal(null)}/>} {modal==='checkout'&&<Checkout onClose={()=>setModal(null)} refCode={refCode} parent={parent} onLogin={()=>setModal('auth')}/>}</>
+  const[parent,setParent]=useState(()=>{try{return JSON.parse(localStorage.getItem('kiddo_parent'))}catch{return null}});
+  const[games,setGames]=useState([]);const[modal,setModal]=useState(null);const[refCode,setRefCode]=useState('');
+  useEffect(()=>{
+    const ref=new URLSearchParams(location.search).get('ref');if(ref){localStorage.setItem('kiddo_ref',ref.toUpperCase());setRefCode(ref.toUpperCase())}
+    api('/api/games').then(d=>setGames(d.games||[])).catch(()=>{});
+  },[]);
+  function loginDone(d){setParent(d);setModal(null)}
+  function logout(){localStorage.removeItem('kiddo_parent');setParent(null);setModal(null)}
+  if(parent)return <ParentDashboard parent={parent} games={games} onLogout={logout}/>;
+  return <>
+    <Landing onLogin={()=>setModal('auth')} onAgent={()=>setModal('agent')} onBuy={()=>setModal('auth')}/>
+    {modal==='auth'&&<AuthModal onClose={()=>setModal(null)} onLogin={loginDone} refCode={refCode}/>}    
+    {modal==='agent'&&<AgentModal onClose={()=>setModal(null)}/>}  
+  </>;
 }
 
 createRoot(document.getElementById('root')).render(<App/>);
