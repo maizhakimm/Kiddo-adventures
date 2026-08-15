@@ -1,0 +1,8 @@
+name = "kiddo-adventures-api"
+main = "src/index.js"
+compatibility_date = "2024-09-23"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "kiddo-adventures-db"
+database_id = "6c675a7d-ca96-4626-926d-4d239cbf08e3"
