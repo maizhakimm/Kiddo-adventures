@@ -145,9 +145,12 @@ export default {
           .bind(child_id, game_key)
           .first();
 
+        const hasStarRating = stars !== undefined && stars !== null;
+        const safeStars = hasStarRating ? Math.max(0, Math.min(3, Number(stars) || 0)) : null;
+
         if (existing) {
-          const newLevel = Math.max(existing.level_reached, level_reached || existing.level_reached);
-          const newStars = Math.max(existing.stars, stars || existing.stars);
+          const newLevel = Math.max(existing.level_reached || 1, level_reached || existing.level_reached || 1);
+          const newStars = hasStarRating ? safeStars : Math.max(0, Math.min(3, existing.stars || 0));
           await db
             .prepare("UPDATE game_progress SET level_reached = ?, stars = ?, last_played = CURRENT_TIMESTAMP WHERE id = ?")
             .bind(newLevel, newStars, existing.id)
@@ -156,9 +159,9 @@ export default {
         } else {
           await db
             .prepare("INSERT INTO game_progress (child_id, game_key, level_reached, stars) VALUES (?, ?, ?, ?)")
-            .bind(child_id, game_key, level_reached || 1, stars || 0)
+            .bind(child_id, game_key, level_reached || 1, safeStars || 0)
             .run();
-          return json({ created: true });
+          return json({ created: true, level_reached: level_reached || 1, stars: safeStars || 0 });
         }
       }
 
