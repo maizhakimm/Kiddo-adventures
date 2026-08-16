@@ -17,6 +17,9 @@ jobs:
         with:
           node-version: 24
 
+      - name: Apply game V2 policy
+        run: python scripts/apply_game_v2.py
+
       - name: Install frontend
         run: npm install --prefix web
 
