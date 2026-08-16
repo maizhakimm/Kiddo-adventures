@@ -13,9 +13,12 @@ s=s.replace('makeChallenge(game.game_key,level)','makeChallenge(game.game_key,le
 s=s.replace("api('/api/games').then(d=>setGames(d.games||[])).catch(()=>{})",
             "api('/api/games').then(d=>setGames((d.games||[]).map(g=>({...g,total_levels:30})))).catch(()=>{})")
 
-# Logout only on the family/profile dashboard, not while a child is inside a profile/world/game.
-s=s.replace('<button className="ghost" onClick={onLogout}>Log keluar</button>',
-            '{!selected&&!world&&!playing&&<button className="ghost" onClick={onLogout}>Log keluar</button>}')
+# Logout only on the family/profile dashboard. IMPORTANT: be idempotent so
+# repeated deploys do not wrap an already-conditional JSX button in another
+# JSX expression (which breaks the Vite build).
+if '{!selected&&!world&&!playing&&<button className="ghost" onClick={onLogout}>Log keluar</button>}' not in s and '{!selected&&!world&&!playing&&!parentView&&<button className="ghost" onClick={onLogout}>Log keluar</button>}' not in s:
+    s=s.replace('<button className="ghost" onClick={onLogout}>Log keluar</button>',
+                '{!selected&&!world&&!playing&&<button className="ghost" onClick={onLogout}>Log keluar</button>}')
 
 # Keep the richer challenge renderer available if an older main.jsx is checked out.
 helper=r'''function ChallengeExperience({challenge,choose,disabled}){
