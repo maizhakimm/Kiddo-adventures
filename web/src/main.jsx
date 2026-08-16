@@ -14,12 +14,12 @@ const AVATARS=[
 ];
 const avatarIcon=id=>AVATARS.find(a=>a.id===id)?.icon||'🧒';
 const worldMeta={
-  huruf:{icon:'🔤',world:'Pulau Huruf',tag:'Bunyi • Huruf • Perkataan',tone:'sunset'},
-  nombor:{icon:'🔢',world:'Lembah Nombor',tag:'Kira • Susun • Banding',tone:'sky'},
-  warna_bentuk:{icon:'🎨',world:'Hutan Warna',tag:'Warna • Bentuk • Corak',tone:'violet'},
-  padan_gambar:{icon:'🧩',world:'Teluk Padan',tag:'Ingatan • Fokus • Padanan',tone:'mint'},
-  jigsaw:{icon:'🧸',world:'Pulau Puzzle',tag:'Visual • Ruang • Sabar',tone:'yellow'},
-  kira_asas:{icon:'➕',world:'Gunung Kira',tag:'Tambah • Tolak • Logik',tone:'rose'}
+  huruf:{icon:'🔤',world:'Pulau Huruf',tag:'Bunyi • Huruf • Perkataan',tone:'sunset',scene:'🏝️  🌊  🐚'},
+  nombor:{icon:'🔢',world:'Lembah Nombor',tag:'Kira • Susun • Banding',tone:'sky',scene:'🚂  🌤️  ⛰️'},
+  warna_bentuk:{icon:'🎨',world:'Hutan Warna',tag:'Warna • Bentuk • Corak',tone:'violet',scene:'🌳  🌈  🦋'},
+  padan_gambar:{icon:'🧩',world:'Teluk Padan',tag:'Ingatan • Fokus • Padanan',tone:'mint',scene:'🛶  🐠  🐚'},
+  jigsaw:{icon:'🧸',world:'Pulau Puzzle',tag:'Visual • Ruang • Sabar',tone:'yellow',scene:'🏰  🧸  ⭐'},
+  kira_asas:{icon:'➕',world:'Gunung Kira',tag:'Tambah • Tolak • Logik',tone:'rose',scene:'🚗  🛣️  🏔️'}
 };
 
 async function api(path,options={}){
@@ -101,13 +101,26 @@ function ProfileEditor({parent,profile,onClose,onSaved}){
   </Modal>;
 }
 
-function MissionMap({game,child,onClose}){
+function LevelPage({game,child,onBack}){
   const meta=worldMeta[game.game_key]||{};
-  const missions=Array.from({length:Math.min(12,game.total_levels)},(_,i)=>i+1);
-  return <Modal title={`${meta.world||game.name_ms} • ${child.name}`} onClose={onClose} wide>
-    <div className={`worldBanner ${meta.tone}`}><div className="worldIcon">{meta.icon}</div><div><span className="eyebrow">ADVENTURE WORLD</span><h3>{game.name_ms}</h3><p>{meta.tag}</p></div></div>
-    <div className="trail">{missions.map((n,i)=><React.Fragment key={n}><button className={`node ${i>0?'locked':''}`} onClick={()=>i===0&&alert(`Mission ${n} untuk ${child.name}`)}><small>{i===0?'Explore':'Locked'}</small><b>{n}</b><span>{i===0?'▶':'🔒'}</span></button>{i<missions.length-1&&<div className="path">•••</div>}</React.Fragment>)}</div>
-  </Modal>;
+  const missions=Array.from({length:game.total_levels||1},(_,i)=>i+1);
+  return <section className={`levelPage level-${meta.tone||'sky'}`}>
+    <div className="levelTopbar">
+      <button className="levelBack" onClick={onBack}>← Dunia</button>
+      <div className="levelTitle"><span className="levelEmoji">{meta.icon||'🎮'}</span><div><span className="eyebrow">{meta.world||game.name_ms}</span><h1>{game.name_ms} • {child.name}</h1><p>{meta.tag||game.name_en}</p></div></div>
+      <div className="levelScene">{meta.scene}</div>
+    </div>
+    <div className="levelMapWrap">
+      <div className="levelMapLabel"><b>Pilih level</b><span>Ikut laluan sampai habis ✨</span></div>
+      <div className="levelTrack">
+        {missions.map((n,i)=><div className={`levelNodeWrap ${i===0?'open':'locked'}`} key={n}>
+          <button className="levelNode" onClick={()=>i===0&&alert(`Level ${n} untuk ${child.name}`)}>
+            <span>{i===0?'▶':'🔒'}</span><b>{n}</b>
+          </button>
+        </div>)}
+      </div>
+    </div>
+  </section>;
 }
 
 function ParentDashboard({parent,games,onLogout}){
@@ -124,15 +137,14 @@ function ParentDashboard({parent,games,onLogout}){
   useEffect(()=>{load()},[]);
   return <div className="dashboardShell">
     <header className="dashHeader">
-      <button className="brand" onClick={()=>setSelected(null)}><span>🎈</span><b>Kiddo Adventures</b></button>
+      <button className="brand" onClick={()=>{if(world)setWorld(null);else setSelected(null)}}><span>🎈</span><b>Kiddo Adventures</b></button>
       <div className="dashActions">
         <span>Hai, {parent.name||'Ibu Bapa'} 👋</span>
-        {selected&&<button className="ghost mini" onClick={()=>setSelected(null)}>Tukar Profil</button>}
         <button className="ghost mini logoutBtn" onClick={onLogout}>Log keluar</button>
       </div>
     </header>
     <main className="dashboardMain">
-      {!selected?
+      {world&&selected?<LevelPage game={world} child={selected} onBack={()=>setWorld(null)}/>:!selected?
         <section className="profileStage">
           <div className="profileHeading"><span className="eyebrow">RUANG KELUARGA</span><h1>Siapa nak main?</h1><p>Pilih profil anak. Setiap anak ada progress dan adventure sendiri.</p></div>
           {loading?<div className="state">Memuat profil…</div>:<div className="profileGrid">
@@ -154,7 +166,6 @@ function ParentDashboard({parent,games,onLogout}){
       </>}
     </main>
     {editor&&<ProfileEditor parent={parent} profile={editor==='new'?null:editor} onClose={()=>setEditor(null)} onSaved={load}/>}    
-    {world&&selected&&<MissionMap game={world} child={selected} onClose={()=>setWorld(null)}/>}  
   </div>;
 }
 
