@@ -1,5 +1,6 @@
 from pathlib import Path
 
+# Triggered on latest main after UI assets were added.
 main_path=Path('web/src/main.jsx')
 worker_path=Path('worker/src/index.js')
 main=main_path.read_text()
