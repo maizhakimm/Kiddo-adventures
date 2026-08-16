@@ -7,15 +7,17 @@ old_level = '''function LevelPage({game,child,onBack,onPlay,refreshKey}){const m
 
 new_level = '''function LevelPage({game,child,onBack,onPlay,refreshKey}){const meta=worldMeta[game.game_key]||{};const missions=Array.from({length:game.total_levels||1},(_,i)=>i+1);const[reached,setReached]=useState(1),[attempted,setAttempted]=useState(new Set()),[correct,setCorrect]=useState(new Set());useEffect(()=>{let alive=true;Promise.all([api(`/api/progress?child_id=${child.id}`),api(`/api/performance?child_id=${child.id}&game_key=${game.game_key}&detail=1`).catch(()=>({levels:[]}))]).then(([d,p])=>{if(!alive)return;const row=(d.progress||[]).find(x=>x.game_key===game.game_key);setReached(Math.max(1,row?.level_reached||1));const levels=p.levels||[];setAttempted(new Set(levels.map(x=>Number(x.level))));setCorrect(new Set(levels.filter(x=>Number(x.correct)===1).map(x=>Number(x.level))))}).catch(()=>{});return()=>{alive=false}},[child.id,game.game_key,refreshKey]);return <section className={`levelPage level-${meta.tone||'sky'}`}><button className="levelBack" onClick={onBack}>← Dunia</button><h1>{meta.world||game.name_ms} • {child.name}</h1><div className="levelLegend"><span><i className="legendDone"/> Selesai</span><span><i className="legendRetry"/> Cuba lagi</span><span><i className="legendLocked"/> Belum buka</span></div><div className="levelTrack">{missions.map(n=>{const open=n<=reached;const done=correct.has(n);const tried=attempted.has(n)&&!done;const cls=`levelNode ${done?'levelDone':tried?'levelRetry':open?'levelOpen':'levelLocked'} ${n===game.total_levels?'levelFinale':''}`;return <button className={cls} key={n} disabled={!open} onClick={()=>open&&onPlay(n)}><b>{n===game.total_levels?'🏆':n}</b>{done&&<small>✓</small>}{tried&&<small>↻</small>}</button>})}</div></section>}'''
 
-if old_level not in s:
-    raise SystemExit('LevelPage source pattern not found')
-s = s.replace(old_level, new_level)
+if old_level in s:
+    s = s.replace(old_level, new_level)
+elif 'function LevelPage(' not in s:
+    raise SystemExit('LevelPage function not found')
 
 old_selected = '''<section className="dashWorlds"><h1>Jom main, {selected.name}!</h1><div className="worldGrid dashGrid">'''
 new_selected = '''<section className="dashWorlds"><div className="activeProfileBar"><div className="activeProfileIdentity"><span>{avatarIcon(selected.avatar)}</span><div><small>PROFIL AKTIF</small><h1>Jom main, {selected.name}!</h1><p>{selected.age} tahun • Pilih dunia untuk sambung adventure.</p></div></div><div className="activeProfileActions"><button onClick={()=>{setGateMode('edit');setGate(true)}}>✏️ Edit Profil</button><button onClick={()=>{setPlaying(null);setWorld(null);setSelected(null)}}>Tukar Profil</button></div></div><div className="worldGrid dashGrid">'''
-if old_selected not in s:
+if old_selected in s:
+    s = s.replace(old_selected, new_selected)
+elif 'activeProfileBar' not in s:
     raise SystemExit('Selected profile source pattern not found')
-s = s.replace(old_selected, new_selected)
 
 # Keep logout strictly on profile chooser / parent home.
 s = s.replace("{!selected&&!world&&!playing&&<button className=\"ghost\" onClick={onLogout}>Log keluar</button>}", "{!selected&&!world&&!playing&&!parentView&&<button className=\"ghost\" onClick={onLogout}>Log keluar</button>}")
