@@ -42,7 +42,7 @@ const huruf = withVisualLevels('huruf', [
   q('finale-huruf','spell-complete','🏆 Cabaran akhir: lengkapkan ZEBRA','🦓 Z E _ R A',['B','P','D','V'],'B','5-7',{finale:true})
 ]);
 
-const nombor = withLevels([
+const nombor = withVisualLevels('nombor', [
   q('kira-objek','count-choice','Berapa batang mancis?','🟫  🟫  🟫',['2','3','4','5'],'3','3-4'),
   q('kira-objek','count-choice','Berapa biji epal?','🍎 🍎 🍎 🍎 🍎 🍎',['5','6','7','8'],'6','3-4'),
   q('kira-objek','count-choice','Berapa bintang?','⭐ ⭐ ⭐ ⭐',['3','4','5','6'],'4','3-4'),
@@ -75,7 +75,7 @@ const nombor = withLevels([
   q('finale-nombor','mixed','🏆 Cabaran akhir: 6 + 2 − 3 = ?','6  +  2  −  3',['4','5','6','7'],'5','6-7',{finale:true})
 ]);
 
-const warna_bentuk = withLevels([
+const warna_bentuk = withVisualLevels('warna_bentuk', [
   q('warna','tap-choice','Pilih warna merah','🍓',['🔴','🔵','🟢','🟡'],'🔴','3-4'),
   q('warna','tap-choice','Pilih warna biru','🌊',['🟡','🔵','🟣','🔴'],'🔵','3-4'),
   q('warna','tap-choice','Pilih warna hijau','🌿',['🔵','🟢','🟡','🟣'],'🟢','3-4'),
@@ -108,7 +108,7 @@ const warna_bentuk = withLevels([
   q('finale-bentuk','mixed','🏆 Pilih hati merah','❤️',['❤️','💙','💚','💛'],'❤️','5-7',{finale:true})
 ]);
 
-const padan_gambar = withLevels([
+const padan_gambar = withVisualLevels('padan_gambar', [
   q('padan-sama','match','Cari gambar yang sama','🐶',['🐱','🐶','🐰','🐼'],'🐶','3-4'),
   q('padan-sama','match','Cari gambar yang sama','🍎',['🍌','🍊','🍎','🍇'],'🍎','3-4'),
   q('padan-sama','match','Cari gambar yang sama','🚗',['🚲','🚌','🚗','🚂'],'🚗','3-4'),
@@ -141,7 +141,7 @@ const padan_gambar = withLevels([
   q('finale-ingatan','memory-order','🏆 Cabaran memori akhir','🐼 🌟 🚂 🍇',['🐼 🌟 🚂 🍇','🌟 🐼 🚂 🍇','🍇 🚂 🌟 🐼','🐼 🚂 🌟 🍇'],'🐼 🌟 🚂 🍇','6-7',{memorySeconds:5,finale:true})
 ]);
 
-const jigsaw = withLevels([
+const jigsaw = withVisualLevels('jigsaw', [
   q('corak','sequence','Apa yang datang seterusnya?','🔴 🔵 🔴 ?',['🔵','🟢','🟡','🔴'],'🔵','4-5'),
   q('corak','sequence','Apa yang datang seterusnya?','⭐ 🌙 ⭐ ?',['☁️','🌙','⭐','☀️'],'🌙','4-5'),
   q('hubungan','logic','Ikan tinggal di...','🐟',['air','pokok','langit','jalan'],'air','4-5'),
@@ -174,7 +174,7 @@ const jigsaw = withLevels([
   q('finale-logik','mixed','🏆 Teka-teki akhir: LIGHT + HOUSE = ?','💡 LIGHT + 🏠 HOUSE',['LIGHTHOUSE','SUNHOUSE','HOUSERAIN','LIGHTROOM'],'LIGHTHOUSE','6-7',{language:'en',finale:true})
 ]);
 
-const kira_asas = withLevels([
+const kira_asas = withVisualLevels('kira_asas', [
   q('tambah','count-choice','Berapa semuanya?','🍎 + 🍎',['2','1','3','4'],'2','4-5'),
   q('tambah','count-choice','Berapa semuanya?','⭐⭐ + ⭐',['2','4','3','1'],'3','4-5'),
   q('tambah','count-choice','2 + 2 = ?','🐟🐟 + 🐟🐟',['4','3','5','2'],'4','4-5'),
