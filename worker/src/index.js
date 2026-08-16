@@ -165,6 +165,28 @@ export default {
         }
       }
 
+      if (path === "/api/performance" && request.method === "POST") {
+        const { child_id, game_key, level, correct } = await request.json();
+        if (!child_id || !game_key || !level) return json({ error: "child_id, game_key, level diperlukan" }, 400);
+        await db.prepare("CREATE TABLE IF NOT EXISTS level_results (id INTEGER PRIMARY KEY AUTOINCREMENT, child_id INTEGER NOT NULL, game_key TEXT NOT NULL, level INTEGER NOT NULL, attempts INTEGER NOT NULL DEFAULT 0, correct INTEGER NOT NULL DEFAULT 0, last_correct INTEGER NOT NULL DEFAULT 0, updated_at TEXT DEFAULT CURRENT_TIMESTAMP, UNIQUE(child_id, game_key, level))").run();
+        await db.prepare("INSERT INTO level_results (child_id, game_key, level, attempts, correct, last_correct) VALUES (?, ?, ?, 1, ?, ?) ON CONFLICT(child_id, game_key, level) DO UPDATE SET attempts = attempts + 1, correct = MAX(correct, excluded.correct), last_correct = excluded.last_correct, updated_at = CURRENT_TIMESTAMP")
+          .bind(child_id, game_key, Number(level), correct ? 1 : 0, correct ? 1 : 0).run();
+        return json({ saved: true });
+      }
+
+      if (path === "/api/performance" && request.method === "GET") {
+        const child_id = url.searchParams.get("child_id");
+        const game_key = url.searchParams.get("game_key");
+        if (!child_id) return json({ error: "child_id diperlukan" }, 400);
+        await db.prepare("CREATE TABLE IF NOT EXISTS level_results (id INTEGER PRIMARY KEY AUTOINCREMENT, child_id INTEGER NOT NULL, game_key TEXT NOT NULL, level INTEGER NOT NULL, attempts INTEGER NOT NULL DEFAULT 0, correct INTEGER NOT NULL DEFAULT 0, last_correct INTEGER NOT NULL DEFAULT 0, updated_at TEXT DEFAULT CURRENT_TIMESTAMP, UNIQUE(child_id, game_key, level))").run();
+        if (game_key) {
+          const row = await db.prepare("SELECT game_key, COUNT(*) attempted_levels, COALESCE(SUM(correct),0) correct_levels, COALESCE(SUM(attempts),0) total_attempts FROM level_results WHERE child_id = ? AND game_key = ? GROUP BY game_key").bind(child_id, game_key).first();
+          return json(row || { game_key, attempted_levels: 0, correct_levels: 0, total_attempts: 0 });
+        }
+        const { results } = await db.prepare("SELECT game_key, COUNT(*) attempted_levels, COALESCE(SUM(correct),0) correct_levels, COALESCE(SUM(attempts),0) total_attempts FROM level_results WHERE child_id = ? GROUP BY game_key").bind(child_id).all();
+        return json({ performance: results });
+      }
+
       if (path === "/api/agents" && request.method === "POST") {
         const { name, email, phone, bank_name, bank_account } = await request.json();
         if (!name || !email) return json({ error: "name, email diperlukan" }, 400);

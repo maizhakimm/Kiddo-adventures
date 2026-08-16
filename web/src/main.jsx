@@ -14,12 +14,12 @@ const AVATARS=[
 ];
 const avatarIcon=id=>AVATARS.find(a=>a.id===id)?.icon||'🧒';
 const worldMeta={
-  huruf:{icon:'🔤',world:'Pulau Huruf',tag:'Bunyi • Huruf • Perkataan',tone:'sunset',scene:'🏝️  🌊  🐚'},
-  nombor:{icon:'🔢',world:'Lembah Nombor',tag:'Kira • Susun • Banding',tone:'sky',scene:'🚂  🌤️  ⛰️'},
-  warna_bentuk:{icon:'🎨',world:'Hutan Warna',tag:'Warna • Bentuk • Corak',tone:'violet',scene:'🌳  🌈  🦋'},
-  padan_gambar:{icon:'🧩',world:'Teluk Padan',tag:'Ingatan • Fokus • Padanan',tone:'mint',scene:'🛶  🐠  🐚'},
-  jigsaw:{icon:'🧸',world:'Pulau Puzzle',tag:'Visual • Ruang • Sabar',tone:'yellow',scene:'🏰  🧸  ⭐'},
-  kira_asas:{icon:'➕',world:'Gunung Kira',tag:'Tambah • Tolak • Logik',tone:'rose',scene:'🚗  🛣️  🏔️'}
+  huruf:{icon:'🔤',world:'Kota Abjad',tag:'Bunyi • Huruf • Perkataan',tone:'sunset',scene:'🏝️  🌊  🐚'},
+  nombor:{icon:'🔢',world:'Kota Nombor',tag:'Kira • Susun • Banding',tone:'sky',scene:'🚂  🌤️  ⛰️'},
+  warna_bentuk:{icon:'🎨',world:'Hutan Pelangi',tag:'Warna • Bentuk • Corak',tone:'violet',scene:'🌳  🌈  🦋'},
+  padan_gambar:{icon:'🧩',world:'Teluk Ingatan',tag:'Ingatan • Fokus • Padanan',tone:'mint',scene:'🛶  🐠  🐚'},
+  jigsaw:{icon:'🧸',world:'Pulau Teka-Teki',tag:'Visual • Ruang • Sabar',tone:'yellow',scene:'🏰  🧸  ⭐'},
+  kira_asas:{icon:'➕',world:'Gunung Matematik',tag:'Tambah • Tolak • Logik',tone:'rose',scene:'🚗  🛣️  🏔️'}
 };
 
 async function api(path,options={}){
@@ -105,10 +105,10 @@ function makeChallenge(gameKey,level){
   const a=(level%5)+1,b=((level+1)%4)+1,answer=a+b;return{prompt:`${a} + ${b} = ?`,visual:'➕',options:[answer,answer+1,Math.max(0,answer-1),answer+2].filter((v,i,a)=>a.indexOf(v)===i).slice(0,4).sort(()=>.5-Math.random()),answer:String(answer)};
 }
 
-function calcStars(correct,answered){
-  const ratio=answered?correct/answered:0;
-  if(ratio>=.9)return 3;
-  if(ratio>=.65)return 2;
+function calcStars(correct,totalLevels){
+  const ratio=totalLevels?correct/totalLevels:0;
+  if(ratio>=.8)return 3;
+  if(ratio>=.5)return 2;
   return 1;
 }
 
@@ -131,7 +131,10 @@ function GameScreen({game,child,level,onBack,onComplete,soundOn,onToggleSound}){
     playSfx(ok?'correct':'wrong',soundOn);
     setResult(ok?'correct':'wrong');
     setBusy(true);
-    try{await api('/api/progress',{method:'POST',body:JSON.stringify({child_id:child.id,game_key:game.game_key,level_reached:isLast?game.total_levels:nextLevel})})}catch{}finally{setBusy(false)}
+    try{
+      await api('/api/performance',{method:'POST',body:JSON.stringify({child_id:child.id,game_key:game.game_key,level,correct:ok})});
+      await api('/api/progress',{method:'POST',body:JSON.stringify({child_id:child.id,game_key:game.game_key,level_reached:isLast?game.total_levels:nextLevel})});
+    }catch{}finally{setBusy(false)}
   }
   const isCorrect=result==='correct';
   return <section className={`gameScreen level-${worldMeta[game.game_key]?.tone||'sky'}`}>
@@ -156,8 +159,9 @@ function GameScreen({game,child,level,onBack,onComplete,soundOn,onToggleSound}){
 
 function WorldResult({game,child,stats,onMap,onWorlds,soundOn,onToggleSound}){
   const meta=worldMeta[game.game_key]||{};
-  const stars=calcStars(stats.correct,stats.answered);
-  const percent=stats.answered?Math.round(stats.correct/stats.answered*100):0;
+  const total=game.total_levels||stats.total||1;
+  const stars=calcStars(stats.correct,total);
+  const percent=Math.round((stats.correct||0)/total*100);
   useEffect(()=>{playSfx('finish',soundOn)},[]);
   return <section className={`worldResult level-${meta.tone||'sky'}`}>
     <div className="worldResultTop"><button className="levelBack" onClick={onMap}>← Peta level</button><button className="soundToggle" onClick={onToggleSound}>{soundOn?'🔊 Bunyi':'🔇 Senyap'}</button></div>
@@ -168,7 +172,7 @@ function WorldResult({game,child,stats,onMap,onWorlds,soundOn,onToggleSound}){
       <h1>Syabas, {child.name}!</h1>
       <p>{meta.world||game.name_ms} selesai untuk sesi ini.</p>
       <div className="starScore" aria-label={`${stars} bintang`}>{[1,2,3].map(n=><span key={n} className={n<=stars?'earned':''}>★</span>)}</div>
-      <div className="scoreStats"><div><b>{stats.correct}/{stats.answered}</b><span>Jawapan betul</span></div><div><b>{percent}%</b><span>Ketepatan</span></div><div><b>{stars}/3</b><span>Bintang</span></div></div>
+      <div className="scoreStats"><div><b>{stats.correct}/{total}</b><span>Level dikuasai</span></div><div><b>{percent}%</b><span>Ketepatan</span></div><div><b>{stars}/3</b><span>Bintang</span></div></div>
       <div className="resultActions"><button className="primary" onClick={onMap}>Lihat peta level</button><button className="ghost" onClick={onWorlds}>Pilih dunia lain</button></div>
       <small className="parentTrackNote">⭐ Skor bintang ini disimpan untuk paparan progress ibu bapa.</small>
     </div>
@@ -178,28 +182,36 @@ function WorldResult({game,child,stats,onMap,onWorlds,soundOn,onToggleSound}){
 function LevelPage({game,child,onBack,onPlay,refreshKey}){
   const meta=worldMeta[game.game_key]||{};const missions=Array.from({length:game.total_levels||1},(_,i)=>i+1);const[reached,setReached]=useState(1);
   useEffect(()=>{api(`/api/progress?child_id=${child.id}`).then(d=>{const row=(d.progress||[]).find(p=>p.game_key===game.game_key);setReached(Math.max(1,row?.level_reached||1))}).catch(()=>setReached(1))},[child.id,game.game_key,refreshKey]);
-  return <section className={`levelPage level-${meta.tone||'sky'}`}><div className="levelTopbar"><button className="levelBack" onClick={onBack}>← Dunia</button><div className="levelTitle"><span className="levelEmoji">{meta.icon||'🎮'}</span><div><span className="eyebrow">{meta.world||game.name_ms}</span><h1>{game.name_ms} • {child.name}</h1><p>{meta.tag||game.name_en}</p></div></div><div className="levelScene">{meta.scene}</div></div><div className="levelMapWrap"><div className="levelMapLabel"><b>Pilih level</b><span>Ikut laluan sampai habis ✨</span></div><div className="levelTrack">{missions.map(n=>{const open=n<=reached;return <div className={`levelNodeWrap ${open?'open':'locked'}`} key={n}><button className="levelNode" disabled={!open} onClick={()=>open&&onPlay(n)}><span>{open?'▶':'🔒'}</span><b>{n}</b></button></div>})}</div></div></section>;
+  return <section className={`levelPage level-${meta.tone||'sky'}`}><div className="levelTopbar"><button className="levelBack" onClick={onBack}>← Dunia</button><div className="levelTitle"><span className="levelEmoji">{meta.icon||'🎮'}</span><div><span className="eyebrow">{meta.world||game.name_ms}</span><h1>{game.name_ms} • {child.name}</h1><p>{meta.tag||game.name_en}</p></div></div><div className="levelScene">{meta.scene}</div></div><div className="levelMapWrap"><div className="levelMapLabel"><b>Pilih level</b><span>Ikut laluan sampai habis ✨</span></div><div className="levelTrack">{missions.map(n=>{const open=n<=reached;return <div className={`levelNodeWrap ${n===missions.length?'finalLevel ':''}${open?'open':'locked'}`} key={n}><button className="levelNode" disabled={!open} onClick={()=>open&&onPlay(n)}><span>{n===missions.length?'🏆':open?'▶':'🔒'}</span><b>{n}</b></button></div>})}</div></div></section>;
+}
+
+function ParentProgressPage({profiles,games,onBack}){
+  const[rows,setRows]=useState([]),[loading,setLoading]=useState(true);
+  useEffect(()=>{let alive=true;(async()=>{setLoading(true);const data=await Promise.all(profiles.map(async p=>{const perf=await api(`/api/performance?child_id=${p.id}`).catch(()=>({performance:[]}));const byKey=Object.fromEntries((perf.performance||[]).map(x=>[x.game_key,x]));const worlds=games.map(g=>{const r=byKey[g.game_key]||{};const correct=Number(r.correct_levels||0),attempted=Number(r.attempted_levels||0),stars=correct?calcStars(correct,g.total_levels):0;return{...g,correct,attempted,stars,percent:Math.round(correct/(g.total_levels||1)*100)}});return{...p,worlds,totalStars:worlds.reduce((s,w)=>s+w.stars,0),mastered:worlds.reduce((s,w)=>s+w.correct,0),possible:worlds.reduce((s,w)=>s+(w.total_levels||0),0)}}));if(alive){data.sort((a,b)=>b.totalStars-a.totalStars||b.mastered-a.mastered);setRows(data);setLoading(false)}})();return()=>{alive=false}},[profiles,games]);
+  return <section className="parentProgressPage"><div className="parentProgressHead"><button className="levelBack" onClick={onBack}>← Kembali</button><div><span className="eyebrow">KAWASAN IBU BAPA</span><h1>Prestasi Anak</h1><p>Ringkasan kemajuan, bintang dan penguasaan setiap dunia.</p></div></div>{loading?<div className="state">Memuat prestasi…</div>:<><div className="rankingBoard"><h2>🏅 Ranking Keluarga</h2>{rows.map((p,i)=><div className="rankRow" key={p.id}><b>{i+1}</b><span className="rankAvatar">{avatarIcon(p.avatar)}</span><div><strong>{p.name}</strong><small>{p.mastered}/{p.possible} level dikuasai</small></div><em>{p.totalStars} 🌟</em></div>)}</div><div className="progressKids">{rows.map(p=><article className="progressKid" key={p.id}><div className="progressKidHead"><span>{avatarIcon(p.avatar)}</span><div><h2>{p.name}</h2><p>{p.age} tahun • {p.totalStars} bintang</p></div></div><div className="progressWorldGrid">{p.worlds.map(w=><div className="progressWorld" key={w.game_key}><div><b>{worldMeta[w.game_key]?.world||w.name_ms}</b><span>{w.correct}/{w.total_levels} level</span></div><strong>{w.percent}%</strong><div className="miniStars">{[1,2,3].map(n=><span key={n} className={n<=w.stars?'earned':''}>🌟</span>)}</div></div>)}</div></article>)}</div></>}</section>;
 }
 
 function ParentDashboard({parent,games,onLogout}){
-  const[profiles,setProfiles]=useState([]),[loading,setLoading]=useState(true),[selected,setSelected]=useState(null),[editor,setEditor]=useState(null),[world,setWorld]=useState(null),[playing,setPlaying]=useState(null),[gate,setGate]=useState(false),[progressTick,setProgressTick]=useState(0),[worldResult,setWorldResult]=useState(null),[runStats,setRunStats]=useState({correct:0,answered:0,startLevel:1}),[soundOn,setSoundOn]=useState(()=>localStorage.getItem('kiddo_sound')!=='off');
+  const[profiles,setProfiles]=useState([]),[loading,setLoading]=useState(true),[selected,setSelected]=useState(null),[editor,setEditor]=useState(null),[world,setWorld]=useState(null),[playing,setPlaying]=useState(null),[gate,setGate]=useState(false),[progressTick,setProgressTick]=useState(0),[worldResult,setWorldResult]=useState(null),[runStats,setRunStats]=useState({correct:0,answered:0,startLevel:1}),[soundOn,setSoundOn]=useState(()=>localStorage.getItem('kiddo_sound')!=='off'),[parentView,setParentView]=useState(''),[gateMode,setGateMode]=useState('edit');
   async function load(){setLoading(true);try{const d=await api(`/api/child-profiles?parent_id=${parent.parent_id||parent.id}`);setProfiles(d.profiles||[]);if(selected){const fresh=(d.profiles||[]).find(p=>p.id===selected.id);setSelected(fresh||null)}}finally{setLoading(false)}}
   useEffect(()=>{load()},[]);
-  const atProfileChooser=!selected&&!world&&!playing&&!worldResult;
+  const atProfileChooser=!selected&&!world&&!playing&&!worldResult&&!parentView;
   function toggleSound(){setSoundOn(v=>{const next=!v;localStorage.setItem('kiddo_sound',next?'on':'off');return next})}
   function startRun(level){setRunStats({correct:0,answered:0,startLevel:level});setWorldResult(null);setPlaying(level)}
-  function handleComplete(ok,next,isLast){
+  async function handleComplete(ok,next,isLast){
     const updated={...runStats,correct:runStats.correct+(ok?1:0),answered:runStats.answered+1};
     setRunStats(updated);setProgressTick(x=>x+1);
     if(isLast){
-      const stars=calcStars(updated.correct,updated.answered);
-      setPlaying(null);setWorldResult({...updated,stars});
+      let mastered=updated.correct;
+      try{const perf=await api(`/api/performance?child_id=${selected.id}&game_key=${world.game_key}`);mastered=Number(perf.correct_levels||0)}catch{}
+      const stars=calcStars(mastered,world.total_levels);
+      setPlaying(null);setWorldResult({...updated,correct:mastered,total:world.total_levels,stars});
       api('/api/progress',{method:'POST',body:JSON.stringify({child_id:selected.id,game_key:world.game_key,level_reached:world.total_levels,stars})}).catch(()=>{});
     }else setPlaying(next);
   }
-  return <div className="dashboardShell"><header className="dashHeader"><button className="brand" onClick={()=>{setPlaying(null);setWorldResult(null);setWorld(null);setSelected(null)}}><span>🎈</span><b>Kiddo Adventures</b></button><div className="dashActions"><span>Hai, {parent.name||'Ibu Bapa'} 👋</span>{atProfileChooser&&<button className="ghost mini logoutBtn" onClick={onLogout}>Log keluar</button>}</div></header>
-    <main className="dashboardMain">{playing&&world&&selected?<GameScreen key={`${world.id||world.game_key}-${playing}`} game={world} child={selected} level={playing} onBack={()=>setPlaying(null)} onComplete={handleComplete} soundOn={soundOn} onToggleSound={toggleSound}/>:worldResult&&world&&selected?<WorldResult game={world} child={selected} stats={worldResult} soundOn={soundOn} onToggleSound={toggleSound} onMap={()=>{setWorldResult(null);setPlaying(null)}} onWorlds={()=>{setWorldResult(null);setPlaying(null);setWorld(null)}}/>:world&&selected?<LevelPage game={world} child={selected} refreshKey={progressTick} onBack={()=>{setWorldResult(null);setWorld(null)}} onPlay={startRun}/>:!selected?<section className="profileStage"><div className="profileHeading"><span className="eyebrow">RUANG KELUARGA</span><h1>Siapa nak main?</h1><p>Pilih profil anak. Setiap anak ada progress dan adventure sendiri.</p></div>{loading?<div className="state">Memuat profil…</div>:<div className="profileGrid">{profiles.map(p=><div className="profileTile" key={p.id}><button className="profilePick" onClick={()=>setSelected(p)}><span>{avatarIcon(p.avatar)}</span><b>{p.name}</b><small>{p.age} tahun</small></button></div>)}{profiles.length<5&&<button className="profileAdd" onClick={()=>setEditor('new')}><span>＋</span><b>Tambah Anak</b><small>Maksimum 5 profil</small></button>}</div>}</section>:<><section className="kidHero"><div className="kidHeroIdentity"><div className="kidBigAvatar">{avatarIcon(selected.avatar)}</div><div><span className="eyebrow">PROFIL AKTIF</span><h1>Jom main, {selected.name}!</h1><p>{selected.age} tahun • Pilih dunia untuk sambung adventure.</p></div></div><div className="kidHeroActions"><button className="ghost parentControl" onClick={()=>setGate(true)}>🔐 Urus Profil</button><button className="ghost" onClick={()=>setSelected(null)}>Tukar Anak</button></div></section><section className="dashWorlds"><div className="dashSectionTitle"><div><span className="eyebrow">PILIH DUNIA</span><h2>Adventure {selected.name}</h2></div><span className="statusPill">Progress disimpan automatik</span></div><div className="worldGrid dashGrid">{games.map((g,i)=>{const m=worldMeta[g.game_key]||{};return <button className={`worldCard ${m.tone}`} key={g.id} onClick={()=>{setWorldResult(null);setWorld(g)}}><span className="worldNo">0{i+1}</span><div className="worldEmoji">{m.icon||'🎮'}</div><span className="age">UMUR {g.min_age}–{g.max_age}</span><h3>{m.world||g.name_ms}</h3><p>{m.tag||g.name_en}</p><div className="worldFoot"><span>{g.total_levels} mission</span><b>▶ Main</b></div></button>})}</div></section></>}</main>
-    {gate&&<ParentGate parent={parent} onClose={()=>setGate(false)} onVerified={()=>{setGate(false);setEditor(selected)}}/>}{editor&&<ProfileEditor parent={parent} profile={editor==='new'?null:editor} onClose={()=>setEditor(null)} onSaved={load}/>}</div>;
+  return <div className="dashboardShell"><header className="dashHeader"><button className="brand" onClick={()=>{setPlaying(null);setWorldResult(null);setWorld(null);setSelected(null);setParentView('')}}><span>🎈</span><b>Kiddo Adventures</b></button><div className="dashActions"><span>Hai, {parent.name||'Ibu Bapa'} 👋</span>{atProfileChooser&&<button className="ghost mini logoutBtn" onClick={onLogout}>Log keluar</button>}</div></header>
+    <main className="dashboardMain">{parentView==='progress'?<ParentProgressPage profiles={profiles} games={games} onBack={()=>setParentView('')}/>:playing&&world&&selected?<GameScreen key={`${world.id||world.game_key}-${playing}`} game={world} child={selected} level={playing} onBack={()=>setPlaying(null)} onComplete={handleComplete} soundOn={soundOn} onToggleSound={toggleSound}/>:worldResult&&world&&selected?<WorldResult game={world} child={selected} stats={worldResult} soundOn={soundOn} onToggleSound={toggleSound} onMap={()=>{setWorldResult(null);setPlaying(null)}} onWorlds={()=>{setWorldResult(null);setPlaying(null);setWorld(null)}}/>:world&&selected?<LevelPage game={world} child={selected} refreshKey={progressTick} onBack={()=>{setWorldResult(null);setWorld(null)}} onPlay={startRun}/>:!selected?<section className="profileStage"><div className="profileHeading"><span className="eyebrow">RUANG KELUARGA</span><h1>Siapa nak main?</h1><p>Pilih profil anak. Setiap anak ada progress dan adventure sendiri.</p><button className="parentProgressBtn" onClick={()=>{setGateMode('progress');setGate(true)}}>📊 Prestasi Anak</button></div>{loading?<div className="state">Memuat profil…</div>:<div className="profileGrid">{profiles.map(p=><div className="profileTile" key={p.id}><button className="profilePick" onClick={()=>setSelected(p)}><span>{avatarIcon(p.avatar)}</span><b>{p.name}</b><small>{p.age} tahun</small></button></div>)}{profiles.length<5&&<button className="profileAdd" onClick={()=>setEditor('new')}><span>＋</span><b>Tambah Anak</b><small>Maksimum 5 profil</small></button>}</div>}</section>:<><section className="kidHero"><div className="kidHeroIdentity"><div className="kidBigAvatar">{avatarIcon(selected.avatar)}</div><div><span className="eyebrow">PROFIL AKTIF</span><h1>Jom main, {selected.name}!</h1><p>{selected.age} tahun • Pilih dunia untuk sambung adventure.</p></div></div><div className="kidHeroActions"><button className="ghost parentControl" onClick={()=>{setGateMode('edit');setGate(true)}}>🔐 Urus Profil</button><button className="ghost" onClick={()=>setSelected(null)}>Tukar Anak</button></div></section><section className="dashWorlds"><div className="dashSectionTitle"><div><span className="eyebrow">PILIH DUNIA</span><h2>Adventure {selected.name}</h2></div><span className="statusPill">Progress disimpan automatik</span></div><div className="worldGrid dashGrid">{games.map((g,i)=>{const m=worldMeta[g.game_key]||{};return <button className={`worldCard ${m.tone}`} key={g.id} onClick={()=>{setWorldResult(null);setWorld(g)}}><span className="worldNo">0{i+1}</span><div className="worldEmoji">{m.icon||'🎮'}</div><span className="age">UMUR {g.min_age}–{g.max_age}</span><h3>{m.world||g.name_ms}</h3><p>{m.tag||g.name_en}</p><div className="worldFoot"><span>{g.total_levels} mission</span><b>▶ Main</b></div></button>})}</div></section></>}</main>
+    {gate&&<ParentGate parent={parent} onClose={()=>setGate(false)} onVerified={()=>{setGate(false);if(gateMode==='progress')setParentView('progress');else setEditor(selected)}}/>}{editor&&<ProfileEditor parent={parent} profile={editor==='new'?null:editor} onClose={()=>setEditor(null)} onSaved={load}/>}</div>;
 }
 
 function AgentModal({onClose}){const[form,setForm]=useState({name:'',email:'',phone:'',bank_name:'',bank_account:''}),[msg,setMsg]=useState(''),[done,setDone]=useState(null);async function submit(e){e.preventDefault();setMsg('');try{setDone(await api('/api/agents',{method:'POST',body:JSON.stringify(form)}))}catch(err){setMsg(err.message)}}return <Modal title="Jadi Agent Kiddo" onClose={onClose}>{done?<div className="success"><h3>Berjaya 🎉</h3><div className="codeBox">{done.agent_code}</div><p>Simpan kod ini untuk semak dashboard agent.</p></div>:<form className="form" onSubmit={submit}><input required placeholder="Nama" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/><input required type="email" placeholder="Email" value={form.email} onChange={e=>setForm({...form,email:e.target.value})}/><input placeholder="Telefon" value={form.phone} onChange={e=>setForm({...form,phone:e.target.value})}/><input placeholder="Bank" value={form.bank_name} onChange={e=>setForm({...form,bank_name:e.target.value})}/><input placeholder="No. akaun bank" value={form.bank_account} onChange={e=>setForm({...form,bank_account:e.target.value})}/>{msg&&<div className="alert">{msg}</div>}<button className="primary">Daftar Agent</button></form>}</Modal>}
