@@ -1,0 +1,30 @@
+name: Apply Kiddo product updates
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/apply_product_updates.py'
+      - '.github/workflows/apply-product-updates.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply product updates
+        run: python scripts/apply_product_updates.py
+      - name: Commit updates
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add web/src/main.jsx worker/src/index.js
+          if git diff --cached --quiet; then
+            echo "No changes"
+          else
+            git commit -m "Improve final level scoring and parent progress"
+            git push
+          fi
