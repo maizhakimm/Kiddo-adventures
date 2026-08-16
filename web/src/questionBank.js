@@ -4,13 +4,13 @@
 const withLevels = bank => bank.map((q, i) => ({ level: i + 1, ...q }));
 const withVisualLevels = (prefix, bank) => withLevels(bank).map(item => ({
   ...item,
-  visualSrc: `/visuals/bank/${prefix}-${String(item.level).padStart(2, '0')}.svg`
+  visualSrc: item.visualSrc || `/visuals/bank/${prefix}-${String(item.level).padStart(2, '0')}.svg`
 }));
 const q = (skill, interaction, prompt, visual, options, answer, age='3-7', extra={}) =>
   ({ skill, interaction, prompt, visual, options, answer, age, ...extra });
 
 const huruf = withVisualLevels('huruf', [
-  q('kenal-huruf','tap-choice','Cari huruf A','A',['A','B','D','E'],'A','3-4',{visualType:'letter'}),
+  q('kenal-huruf','tap-choice','Cari huruf A','A',['A','B','D','E'],'A','3-4',{visualType:'letter',visualSrc:'/visuals/bank/huruf-01.webp'}),
   q('kenal-huruf','tap-choice','Cari huruf B','B',['D','B','P','A'],'B','3-4',{visualType:'letter'}),
   q('kenal-huruf','tap-choice','Cari huruf C','C',['G','O','C','S'],'C','3-4',{visualType:'letter'}),
   q('kenal-huruf','tap-choice','Cari huruf D','D',['B','P','D','O'],'D','3-4',{visualType:'letter'}),
