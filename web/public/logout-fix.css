@@ -1,10 +1,20 @@
-/* Keep account controls reachable on small screens */
+/* Account controls + parent safety + gameplay */
 @media (max-width:760px){
   .dashHeader{padding-right:12px!important;gap:8px!important;align-items:center!important;flex-wrap:wrap!important}
   .dashHeader .brand{flex:1 1 auto;min-width:0}
-  .dashActions{width:100%!important;display:flex!important;justify-content:flex-end!important;align-items:center!important;gap:8px!important;flex-wrap:wrap!important}
+  .dashActions{width:auto!important;display:flex!important;justify-content:flex-end!important;align-items:center!important;gap:8px!important;flex-wrap:wrap!important}
   .dashActions>span{display:none!important}
   .dashActions .ghost.mini{display:inline-flex!important;align-items:center!important;justify-content:center!important;min-height:42px!important;padding:10px 14px!important;font-size:13px!important}
-  .dashActions .ghost.mini:last-child{position:fixed!important;right:16px!important;bottom:16px!important;z-index:120!important;background:#2f2b49!important;color:#fff!important;border-color:#2f2b49!important;box-shadow:0 10px 28px #2f2b4940!important}
-  .dashboardMain{padding-bottom:78px!important}
+  .dashActions .logoutBtn{position:static!important;background:#2f2b49!important;color:#fff!important;border-color:#2f2b49!important;box-shadow:0 8px 20px #2f2b4925!important}
+  .dashboardMain{padding-bottom:0!important}
+}
+
+.parentGateText{color:#6e7183;line-height:1.55;margin:-4px 0 16px}.parentControl{border-style:dashed!important}.deleteConfirm{background:#fff1f1;border:1px solid #f0b5b5;border-radius:16px;padding:14px;color:#753d3d}.deleteConfirm p{font-size:12px;line-height:1.45;margin:5px 0 12px}.deleteConfirm>div{display:flex;gap:8px}.deleteConfirm>div>*{flex:1}.deleteConfirm .dangerBtn{background:#a94343;color:#fff;border-color:#a94343}
+
+.gameScreen{min-height:calc(100vh - 76px);padding:22px max(5vw,18px) 50px;background:linear-gradient(180deg,#fffdf8,#f5f2ff)}.gameBar{max-width:760px;margin:0 auto 18px;display:flex;align-items:center;gap:14px}.gameBar>div{display:grid}.gameBar small{color:#7c7592;font-weight:800}.gameBar b{font-family:'Baloo 2',Nunito,sans-serif;font-size:24px}.gameBoard{max-width:760px;margin:auto;background:#fff;border-radius:30px;padding:34px;box-shadow:0 18px 50px #362c6315;text-align:center;transition:.2s}.gameBoard.correct{box-shadow:0 0 0 4px #b8eac8,0 18px 50px #362c6315}.gameBoard.wrong{animation:gameShake .28s ease}.gameVisual{font-size:clamp(54px,11vw,95px);min-height:110px;display:grid;place-items:center;letter-spacing:6px}.gameBoard h1{font-family:'Baloo 2',Nunito,sans-serif;font-size:clamp(29px,5vw,44px);margin:5px 0 24px;color:#302d4d}.answerGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;max-width:520px;margin:auto}.answerGrid button{min-height:78px;border:2px solid #e2dcee;background:#faf8ff;border-radius:20px;font-size:30px;font-weight:900;color:#3b3657;transition:.15s}.answerGrid button:active{transform:scale(.96);background:#efe9ff;border-color:#7159c4}.gameFeedback{margin:20px auto 0;max-width:520px;border-radius:18px;padding:14px;font-weight:900}.gameFeedback.bad{background:#fff0e8;color:#a65731}.gameFeedback.good{background:#e9f9ee;color:#337048;display:flex;align-items:center;justify-content:space-between;gap:10px}.gameFeedback.good button{border:0;border-radius:13px;background:#4d9a61;color:#fff;padding:10px 14px;font-weight:900}
+@keyframes gameShake{25%{transform:translateX(-7px)}50%{transform:translateX(7px)}75%{transform:translateX(-4px)}}
+
+@media(max-width:480px){
+  .dashActions .logoutBtn{min-height:38px!important;padding:8px 12px!important;font-size:11px!important}
+  .gameScreen{min-height:calc(100svh - 60px);padding:14px 12px 28px}.gameBar{margin-bottom:10px}.gameBar b{font-size:20px}.gameBoard{border-radius:23px;padding:22px 14px}.gameVisual{font-size:58px;min-height:82px}.gameBoard h1{font-size:27px;margin:4px 0 18px}.answerGrid{gap:9px}.answerGrid button{min-height:68px;border-radius:16px;font-size:25px}.gameFeedback{font-size:13px}.gameFeedback.good{display:grid}.gameFeedback.good button{width:100%}
 }
