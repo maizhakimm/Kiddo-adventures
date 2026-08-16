@@ -1,5 +1,6 @@
 import React,{useEffect,useMemo,useState}from'react';
 import{createRoot}from'react-dom/client';
+import{makeChallenge}from'./questionBank.js';
 import'./styles.css';
 
 const API='';
@@ -80,29 +81,6 @@ function ProfileEditor({parent,profile,onClose,onSaved}){
   async function save(e){e.preventDefault();setBusy(true);setMsg('');try{const body={...form,parent_id:parent.parent_id||parent.id,age:Number(form.age)};if(isEdit)await api(`/api/child-profiles/${profile.id}`,{method:'PUT',body:JSON.stringify(body)});else await api('/api/child-profiles',{method:'POST',body:JSON.stringify(body)});await onSaved();onClose()}catch(err){setMsg(err.message)}finally{setBusy(false)}}
   async function remove(){setBusy(true);setMsg('');try{await api(`/api/child-profiles/${profile.id}`,{method:'DELETE'});await onSaved();onClose()}catch(err){setMsg(err.message)}finally{setBusy(false)}}
   return <Modal title={isEdit?'Urus Profil Anak':'Tambah Profil Anak'} onClose={onClose}><form className="form" onSubmit={save}><input required placeholder="Nama anak" value={form.name} onChange={e=>setForm({...form,name:e.target.value})}/><select required value={form.age} onChange={e=>setForm({...form,age:e.target.value})}><option value="">Pilih umur</option>{[3,4,5,6,7].map(age=><option key={age} value={age}>{age} tahun</option>)}</select><div className="avatarLabel">Pilih avatar</div><div className="avatars">{AVATARS.map(a=><button type="button" key={a.id} className={`avatarBtn ${form.avatar===a.id?'active':''}`} onClick={()=>setForm({...form,avatar:a.id})}>{a.icon}</button>)}</div>{msg&&<div className="alert">{msg}</div>}<button className="primary" disabled={busy}>{busy?'Tunggu…':isEdit?'Simpan Perubahan':'Tambah Profil'}</button>{isEdit&&!confirmDelete&&<button type="button" className="dangerBtn" onClick={()=>setConfirmDelete(true)}>🗑️ Padam Profil</button>}{isEdit&&confirmDelete&&<div className="deleteConfirm"><b>Padam {profile.name}?</b><p>Semua progress permainan profil ini akan dipadam dan tidak boleh dipulihkan.</p><div><button type="button" className="ghost" onClick={()=>setConfirmDelete(false)}>Batal</button><button type="button" className="dangerBtn" disabled={busy} onClick={remove}>Ya, Padam</button></div></div>}</form></Modal>;
-}
-
-function makeChallenge(gameKey,level){
-  const seed=(level-1)%6;
-  if(gameKey==='huruf'){
-    const letters=['A','B','C','D','E','F'];const answer=letters[seed];const options=[answer,...letters.filter(x=>x!==answer).slice(0,3)].sort(()=>.5-Math.random());
-    return{prompt:`Cari huruf ${answer}`,visual:answer,visualType:'letter',options,answer};
-  }
-  if(gameKey==='nombor'){
-    const answer=(level%9)+1;const options=[answer,Math.max(1,answer-1),answer+1,answer+2].filter((v,i,a)=>a.indexOf(v)===i).slice(0,4).sort(()=>.5-Math.random());
-    return{prompt:'Berapa jumlah bintang?',visual:'⭐'.repeat(Math.min(answer,9)),options,answer:String(answer)};
-  }
-  if(gameKey==='warna_bentuk'){
-    const items=[['Bulatan','🔵'],['Segi tiga','🔺'],['Segi empat','🟩'],['Bintang','⭐'],['Hati','💜'],['Berlian','🔶']];const item=items[seed];
-    return{prompt:`Pilih ${item[0]}`,visual:'🎨',options:items.slice(0,4).map(x=>x[1]).concat(seed>3?[item[1]]:[]).slice(-4).sort(()=>.5-Math.random()),answer:item[1]};
-  }
-  if(gameKey==='padan_gambar'){
-    const icons=['🐶','🐱','🐰','🐼','🦊','🐸'];const answer=icons[seed];return{prompt:'Cari gambar yang sama',visual:answer,options:icons.slice(0,4).concat(seed>3?[answer]:[]).slice(-4).sort(()=>.5-Math.random()),answer};
-  }
-  if(gameKey==='jigsaw'){
-    const sets=[['🍎','🍊','🍋','🍇'],['🚗','🚌','🚲','🚂'],['🌞','☁️','🌧️','🌈']];const set=sets[level%sets.length];const answer=set[seed%4];return{prompt:'Pilih kepingan yang sepadan',visual:`❓ + ${answer}`,options:[...set].sort(()=>.5-Math.random()),answer};
-  }
-  const a=(level%5)+1,b=((level+1)%4)+1,answer=a+b;return{prompt:`${a} + ${b} = ?`,visual:'➕',options:[answer,answer+1,Math.max(0,answer-1),answer+2].filter((v,i,a)=>a.indexOf(v)===i).slice(0,4).sort(()=>.5-Math.random()),answer:String(answer)};
 }
 
 function calcStars(correct,totalLevels){
