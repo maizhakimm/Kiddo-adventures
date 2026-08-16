@@ -198,7 +198,7 @@ function ParentDashboard({parent,games,onLogout}){
   const atProfileChooser=!selected&&!world&&!playing&&!worldResult&&!parentView;
   function toggleSound(){setSoundOn(v=>{const next=!v;localStorage.setItem('kiddo_sound',next?'on':'off');return next})}
   function startRun(level){setRunStats({correct:0,answered:0,startLevel:level});setWorldResult(null);setPlaying(level)}
-  async function handleComplete(ok,next,isLast){
+  async async function handleComplete(ok,next,isLast){
     const updated={...runStats,correct:runStats.correct+(ok?1:0),answered:runStats.answered+1};
     setRunStats(updated);setProgressTick(x=>x+1);
     if(isLast){
