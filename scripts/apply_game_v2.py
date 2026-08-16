@@ -3,9 +3,21 @@ from pathlib import Path
 p=Path('web/src/main.jsx')
 s=p.read_text()
 
-# Repair a typo left by an earlier automated patch so production builds can proceed.
+# Repair earlier patch typo if present.
 s=s.replace('async async function handleComplete(ok,next,isLast){','async function handleComplete(ok,next,isLast){')
 
+# Age-aware question selection.
+s=s.replace('makeChallenge(game.game_key,level)','makeChallenge(game.game_key,level,child.age)')
+
+# Standardize every world to 30 levels in the frontend, regardless of older DB seed values.
+s=s.replace("api('/api/games').then(d=>setGames(d.games||[])).catch(()=>{})",
+            "api('/api/games').then(d=>setGames((d.games||[]).map(g=>({...g,total_levels:30})))).catch(()=>{})")
+
+# Logout only on the family/profile dashboard, not while a child is inside a profile/world/game.
+s=s.replace('<button className="ghost" onClick={onLogout}>Log keluar</button>',
+            '{!selected&&!world&&!playing&&<button className="ghost" onClick={onLogout}>Log keluar</button>}')
+
+# Keep the richer challenge renderer available if an older main.jsx is checked out.
 helper=r'''function ChallengeExperience({challenge,choose,disabled}){
   const type=challenge.interaction||'tap-choice';
   const math=['count-choice','compare','story-math','mixed'].includes(type)||['tambah','tolak','banding','nombor-hilang','cerita','finale-matematik'].includes(challenge.skill);
