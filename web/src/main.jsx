@@ -85,32 +85,40 @@ function makeChallenge(gameKey,level){
 const confettiBits=Array.from({length:28},(_,i)=>i);
 function GameScreen({game,child,level,onBack,onComplete}){
   const challenge=useMemo(()=>makeChallenge(game.game_key,level),[game.game_key,level]);
-  const[result,setResult]=useState(''),[busy,setBusy]=useState(false),[countdown,setCountdown]=useState(10);
+  const[result,setResult]=useState(''),[busy,setBusy]=useState(false),[countdown,setCountdown]=useState(5);
   const nextLevel=Math.min(level+1,game.total_levels);
   useEffect(()=>{
-    if(result!=='correct')return;
-    setCountdown(10);
-    const id=setInterval(()=>setCountdown(v=>v-1),1000);
-    const jump=setTimeout(()=>onComplete(nextLevel),10000);
+    if(!result)return;
+    setCountdown(5);
+    const id=setInterval(()=>setCountdown(v=>Math.max(0,v-1)),1000);
+    const jump=setTimeout(()=>onComplete(nextLevel),5000);
     return()=>{clearInterval(id);clearTimeout(jump)};
   },[result,nextLevel,onComplete]);
   async function choose(value){
-    if(result==='correct'||busy)return;
+    if(result||busy)return;
     const ok=String(value)===String(challenge.answer);
-    if(!ok){setResult('wrong');setTimeout(()=>setResult(''),700);return}
-    setResult('correct');setBusy(true);
-    try{await api('/api/progress',{method:'POST',body:JSON.stringify({child_id:child.id,game_key:game.game_key,level_reached:nextLevel,stars:level})})}catch{}finally{setBusy(false)}
+    setResult(ok?'correct':'wrong');
+    setBusy(true);
+    try{await api('/api/progress',{method:'POST',body:JSON.stringify({child_id:child.id,game_key:game.game_key,level_reached:nextLevel,stars:ok?level:0})})}catch{}finally{setBusy(false)}
   }
+  const isCorrect=result==='correct';
   return <section className={`gameScreen level-${worldMeta[game.game_key]?.tone||'sky'}`}>
     <div className="gameBar"><button className="levelBack" onClick={onBack}>← Level</button><div><small>{worldMeta[game.game_key]?.world}</small><b>Level {level}</b></div></div>
-    <div className={`gameBoard ${result}`}>
-      {result==='correct'&&<div className="confettiLayer" aria-hidden="true">{confettiBits.map(i=><i key={i} style={{'--i':i}} />)}</div>}
+    <div className="gameBoard">
       <div className={`gameVisual ${challenge.visualType==='letter'?'bigLetter':''}`}>{challenge.visual}</div>
       <h1>{challenge.prompt}</h1>
-      <div className="answerGrid">{challenge.options.map((o,i)=><button key={`${o}-${i}`} onClick={()=>choose(o)}>{o}</button>)}</div>
-      {result==='wrong'&&<div className="gameFeedback bad">Cuba lagi 💪</div>}
-      {result==='correct'&&<div className="gameFeedback good"><div className="successRow"><span>Bagus! ⭐</span><span className="countdownBadge">⏱️ {Math.max(0,countdown)}s</span></div><small>Level seterusnya akan bermula automatik.</small><button onClick={()=>onComplete(nextLevel)}>Teruskan sekarang →</button></div>}
+      <div className="answerGrid">{challenge.options.map((o,i)=><button key={`${o}-${i}`} disabled={!!result} onClick={()=>choose(o)}>{o}</button>)}</div>
     </div>
+    {result&&<div className={`resultOverlay ${isCorrect?'resultCorrect':'resultWrong'}`}>
+      {isCorrect&&<div className="confettiLayer" aria-hidden="true">{confettiBits.map(i=><i key={i} style={{'--i':i}} />)}</div>}
+      <div className="resultPopup" role="dialog" aria-live="assertive">
+        <div className="resultIcon">{isCorrect?'🎉':'🌈'}</div>
+        <h2>{isCorrect?'Betul! Hebat!':'Belum tepat'}</h2>
+        <p>{isCorrect?`Bagus, ${child.name}!`:<>Jawapan yang betul ialah <strong>{String(challenge.answer)}</strong>.</>}</p>
+        <div className="resultCountdown"><span>⏱️</span><b>{countdown}</b><small>saat ke level seterusnya</small></div>
+        <button onClick={()=>onComplete(nextLevel)}>Teruskan sekarang →</button>
+      </div>
+    </div>}
   </section>;
 }
 
