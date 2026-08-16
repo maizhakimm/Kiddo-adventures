@@ -20,6 +20,11 @@ jobs:
       - name: Apply game V2 policy
         run: python scripts/apply_game_v2.py
 
+      - name: Restore profile controls and level states
+        run: |
+          python scripts/restore_profile_controls_and_level_status.py
+          python scripts/add_level_detail_api.py
+
       - name: Install frontend
         run: npm install --prefix web
 
