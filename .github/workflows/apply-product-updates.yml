@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'scripts/apply_product_updates.py'
+      - 'scripts/apply_game_v2.py'
       - '.github/workflows/apply-product-updates.yml'
 
 permissions:
@@ -17,6 +18,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Apply product updates
         run: python scripts/apply_product_updates.py
+      - name: Apply V2 game interactions
+        run: python scripts/apply_game_v2.py
       - name: Commit updates
         run: |
           git config user.name "github-actions[bot]"
@@ -25,6 +28,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No changes"
           else
-            git commit -m "Improve final level scoring and parent progress"
+            git commit -m "Polish V2 game interactions and child-friendly prompts"
             git push
           fi
