@@ -1,157 +1,138 @@
-// Kiddo Adventures question bank
-// Data-driven, deterministic and intentionally varied by learning objective.
-// Keep every level auditable here instead of generating repeated questions in the UI.
+// Kiddo Adventures Question Bank V2
+// Auditable curriculum: varied skills, BM + English word play, spelling and age metadata.
+// Current game engine renders choice-based interactions; `interaction` prepares us for drag/drop,
+// memory reveal and letter-slot UI without changing the learning content again.
 
-function rotate(items, level) {
-  const list = [...items];
-  if (!list.length) return list;
-  const n = (level - 1) % list.length;
-  return [...list.slice(n), ...list.slice(0, n)];
-}
+const withLevels = bank => bank.map((q, i) => ({ level: i + 1, ...q }));
+const q = (skill, interaction, prompt, visual, options, answer, age='3-7', extra={}) =>
+  ({ skill, interaction, prompt, visual, options, answer, age, ...extra });
 
-function options(answer, distractors, level) {
-  const unique = [answer, ...distractors].filter((v, i, a) => a.findIndex(x => String(x) === String(v)) === i).slice(0, 4);
-  return rotate(unique, level);
-}
+const huruf = withLevels([
+  q('kenal-huruf','tap-choice','Cari huruf A','A',['A','B','D','E'],'A','3-4',{visualType:'letter'}),
+  q('kenal-huruf','tap-choice','Cari huruf B','B',['D','B','P','A'],'B','3-4',{visualType:'letter'}),
+  q('kenal-huruf','tap-choice','Cari huruf C','C',['G','O','C','S'],'C','3-4',{visualType:'letter'}),
+  q('kenal-huruf','tap-choice','Mana satu huruf D?','D',['B','P','D','O'],'D','3-4',{visualType:'letter'}),
+  q('huruf-awal','image-choice','Epal bermula dengan huruf apa?','🍎 Epal',['A','E','I','O'],'E','4-5'),
+  q('huruf-awal','image-choice','Feri bermula dengan huruf apa?','⛴️ Feri',['V','P','F','T'],'F','4-5'),
+  q('kenal-huruf','tap-choice','Cari huruf G','G',['C','G','J','Q'],'G','3-4',{visualType:'letter'}),
+  q('huruf-awal','image-choice','Harimau bermula dengan huruf apa?','🐯 Harimau',['K','H','R','M'],'H','4-5'),
+  q('huruf-awal','image-choice','Ikan bermula dengan huruf apa?','🐟 Ikan',['E','A','I','U'],'I','4-5'),
+  q('huruf-awal','image-choice','Jam bermula dengan huruf apa?','⏰ Jam',['G','J','C','Z'],'J','4-5'),
+  q('padan-perkataan','image-choice','Pilih perkataan yang bermula dengan K','K',['🐱 Kucing','💡 Lampu','👁️ Mata','🍚 Nasi'],'🐱 Kucing','5-6'),
+  q('padan-perkataan','image-choice','Pilih perkataan yang bermula dengan L','L',['👁️ Mata','💡 Lampu','🏠 Rumah','🥛 Susu'],'💡 Lampu','5-6'),
+  q('kenal-huruf','tap-choice','Cari huruf M','M',['N','W','M','H'],'M','3-4',{visualType:'letter'}),
+  q('ejaan','spell-complete','Lengkapkan ejaan NASI','🍚 N A _ I',['S','R','M','T'],'S','5-6'),
+  q('ejaan','spell-complete','Lengkapkan ejaan OREN','🍊 O _ E N',['A','R','U','L'],'R','5-6'),
+  q('ejaan','spell-complete','Lengkapkan ejaan PISANG','🍌 P I _ A N G',['S','R','T','L'],'S','5-6'),
+  q('kenal-huruf','tap-choice','Cari huruf Q','Q',['O','Q','G','C'],'Q','5-6',{visualType:'letter'}),
+  q('ejaan','spell-complete','Lengkapkan ejaan RUMAH','🏠 R U _ A H',['N','M','L','B'],'M','5-6'),
+  q('ejaan','spell-complete','Lengkapkan ejaan SUSU','🥛 S U _ U',['S','C','Z','T'],'S','5-6'),
+  q('ejaan','spell-complete','Lengkapkan ejaan TOPI','🎩 T O _ I',['B','P','D','F'],'P','5-6'),
+  q('huruf-awal','image-choice','Ular bermula dengan huruf apa?','🐍 Ular',['O','U','V','A'],'U','4-5'),
+  q('huruf-awal','image-choice','Van bermula dengan huruf apa?','🚐 Van',['W','V','F','B'],'V','4-5'),
+  q('huruf-awal','image-choice','Wau bermula dengan huruf apa?','🪁 Wau',['V','M','W','Y'],'W','4-5'),
+  q('kenal-huruf','tap-choice','Cari huruf X','X',['K','X','Y','Z'],'X','5-6',{visualType:'letter'}),
+  q('ejaan','spell-complete','Lengkapkan ejaan YO-YO','🪀 _ O - Y O',['Y','V','U','J'],'Y','5-6'),
+  q('finale-huruf','image-choice','🏆 Zebra bermula dengan huruf apa?','🦓 Zebra',['S','Z','J','X'],'Z','5-7',{finale:true})
+]);
 
-const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
-const LETTER_EXAMPLES = [
-  ['A', '🐔 Ayam'], ['B', '⚽ Bola'], ['C', '🥤 Cawan'], ['D', '🎲 Dadu'], ['E', '🍎 Epal'], ['F', '⛴️ Feri'],
-  ['G', '🐘 Gajah'], ['H', '🐯 Harimau'], ['I', '🐟 Ikan'], ['J', '⏰ Jam'], ['K', '🐱 Kucing'], ['L', '💡 Lampu'],
-  ['M', '👁️ Mata'], ['N', '🍚 Nasi'], ['O', '🍊 Oren'], ['P', '🍌 Pisang'], ['Q', 'Q'], ['R', '🏠 Rumah'],
-  ['S', '🥛 Susu'], ['T', '🎩 Topi'], ['U', '🐍 Ular'], ['V', '🚐 Van'], ['W', '🪁 Wau'], ['X', '🩻 X-ray'],
-  ['Y', '🪀 Yo-yo'], ['Z', '🦓 Zebra']
-];
+const nombor = withLevels([
+  q('kenal-nombor','tap-choice','Cari nombor 1','1',['1','2','3','4'],'1','3-4',{visualType:'letter'}),
+  q('kenal-nombor','tap-choice','Cari nombor 2','2',['3','2','1','4'],'2','3-4',{visualType:'letter'}),
+  q('kenal-nombor','tap-choice','Cari nombor 3','3',['2','4','3','5'],'3','3-4',{visualType:'letter'}),
+  q('kenal-nombor','tap-choice','Cari nombor 4','4',['5','3','1','4'],'4','3-4',{visualType:'letter'}),
+  q('kenal-nombor','tap-choice','Cari nombor 5','5',['2','5','6','4'],'5','3-4',{visualType:'letter'}),
+  q('kira-objek','count-choice','Berapa biji epal?','🍎 🍎',['1','3','2','4'],'2','3-4'),
+  q('kira-objek','count-choice','Berapa ekor ikan?','🐟 🐟 🐟',['4','2','3','5'],'3','3-4'),
+  q('kira-objek','count-choice','Berapa bintang?','⭐ ⭐ ⭐ ⭐',['4','5','3','2'],'4','3-4'),
+  q('kuantiti','image-choice','Pilih kumpulan yang ada 5 objek','5',['⭐⭐⭐⭐','🍎🍎🍎🍎🍎','🐟🐟🐟','🌼🌼'],'🍎🍎🍎🍎🍎','4-5'),
+  q('kenal-nombor','tap-choice','Cari nombor 6','6',['6','8','5','7'],'6','3-4',{visualType:'letter'}),
+  q('kenal-nombor','tap-choice','Cari nombor 7','7',['9','6','7','8'],'7','3-4',{visualType:'letter'}),
+  q('kira-objek','count-choice','Berapa belon?','🎈🎈🎈🎈🎈🎈🎈🎈',['6','8','7','9'],'8','4-5'),
+  q('kenal-nombor','tap-choice','Cari nombor 9','9',['10','8','9','7'],'9','3-4',{visualType:'letter'}),
+  q('kenal-nombor','tap-choice','Cari nombor 10','10',['9','10','8','7'],'10','4-5',{visualType:'letter'}),
+  q('urutan','sequence','Lengkapkan urutan','1  •  2  •  ?  •  4',['5','3','2','1'],'3','5-6'),
+  q('urutan','sequence','Nombor apa selepas 5?','4  •  5  •  ?',['5','7','6','4'],'6','5-6'),
+  q('urutan','sequence','Nombor apa sebelum 8?','?  •  8  •  9',['6','9','7','8'],'7','5-6'),
+  q('banding','compare','Kumpulan mana lebih banyak?','⭐⭐⭐⭐⭐⭐⭐⭐   vs   ⭐⭐⭐⭐⭐⭐',['8','6','7','5'],'8','5-6'),
+  q('banding','compare','Nombor mana lebih kecil?','4   atau   7',['4','7','6','5'],'4','5-6'),
+  q('finale-nombor','sequence','🏆 Lengkapkan urutan','7  •  8  •  9  •  ?',['10','8','11','9'],'10','5-7',{finale:true})
+]);
 
-const huruf = LETTER_EXAMPLES.map(([letter, example], index) => {
-  const level = index + 1;
-  const prev = LETTERS[(index + 25) % 26];
-  const next = LETTERS[(index + 1) % 26];
-  const far = LETTERS[(index + 7) % 26];
-  if (level <= 13) {
-    return {
-      level,
-      skill: 'kenal-huruf',
-      prompt: `Cari huruf ${letter}`,
-      visual: letter,
-      visualType: 'letter',
-      options: options(letter, [prev, next, far], level),
-      answer: letter
-    };
-  }
-  return {
-    level,
-    skill: 'huruf-awal',
-    prompt: example === 'Q' ? 'Cari huruf Q' : `Huruf awal untuk ${example.replace(/^\S+\s/, '')}?`,
-    visual: example,
-    visualType: example === 'Q' ? 'letter' : 'word',
-    options: options(letter, [prev, next, far], level),
-    answer: letter
-  };
-});
+const warna_bentuk = withLevels([
+  q('warna','tap-choice','Pilih warna merah','🍓 Strawberi',['🔴','🔵','🟢','🟡'],'🔴','3-4'),
+  q('warna','tap-choice','Pilih warna biru','🌊 Laut',['🟡','🔵','🟣','🔴'],'🔵','3-4'),
+  q('warna','tap-choice','Pilih warna hijau','🌿 Daun',['🔵','🟢','🟡','🟣'],'🟢','3-4'),
+  q('warna','tap-choice','Pilih warna kuning','☀️ Matahari',['🟣','🔴','🟡','🟢'],'🟡','3-4'),
+  q('warna-objek','image-choice','Pisang biasanya warna apa?','🍌',['🟢','🟡','🔵','🟣'],'🟡','4-5'),
+  q('bentuk','tap-choice','Cari bulatan','⚽ Bola',['⚪','🔺','◼️','⭐'],'⚪','3-4'),
+  q('bentuk','tap-choice','Cari segi tiga','🔺',['⭐','🔺','❤️','⚪'],'🔺','3-4'),
+  q('bentuk','tap-choice','Cari segi empat','🪟 Tingkap',['❤️','⚪','◼️','🔺'],'◼️','4-5'),
+  q('bentuk-objek','image-choice','Bola berbentuk apa?','⚽',['bulat','segi tiga','segi empat','bintang'],'bulat','4-5'),
+  q('finale-bentuk','odd-one','🏆 Cari bentuk hati','🔺  ⚪  ❤️  ⭐',['🔺','❤️','⭐','⚪'],'❤️','4-6',{finale:true})
+]);
 
-const nombor = [
-  {skill:'kenal-nombor',prompt:'Cari nombor 1',visual:'1',options:['1','2','4','3'],answer:'1'},
-  {skill:'kenal-nombor',prompt:'Cari nombor 2',visual:'2',options:['3','2','1','4'],answer:'2'},
-  {skill:'kenal-nombor',prompt:'Cari nombor 3',visual:'3',options:['2','4','3','5'],answer:'3'},
-  {skill:'kenal-nombor',prompt:'Cari nombor 4',visual:'4',options:['5','3','1','4'],answer:'4'},
-  {skill:'kenal-nombor',prompt:'Cari nombor 5',visual:'5',options:['2','5','6','4'],answer:'5'},
-  {skill:'kira-objek',prompt:'Berapa biji epal?',visual:'🍎🍎',options:['1','3','2','4'],answer:'2'},
-  {skill:'kira-objek',prompt:'Berapa ekor ikan?',visual:'🐟🐟🐟',options:['4','2','3','5'],answer:'3'},
-  {skill:'kira-objek',prompt:'Berapa bintang?',visual:'⭐⭐⭐⭐',options:['4','5','3','2'],answer:'4'},
-  {skill:'kira-objek',prompt:'Berapa belon?',visual:'🎈🎈🎈🎈🎈',options:['6','4','5','3'],answer:'5'},
-  {skill:'kira-objek',prompt:'Berapa bunga?',visual:'🌼🌼🌼🌼🌼🌼',options:['5','7','6','4'],answer:'6'},
-  {skill:'kenal-nombor',prompt:'Cari nombor 6',visual:'6',options:['6','8','5','7'],answer:'6'},
-  {skill:'kenal-nombor',prompt:'Cari nombor 7',visual:'7',options:['9','6','7','8'],answer:'7'},
-  {skill:'kenal-nombor',prompt:'Cari nombor 8',visual:'8',options:['7','9','6','8'],answer:'8'},
-  {skill:'kenal-nombor',prompt:'Cari nombor 9',visual:'9',options:['10','8','9','7'],answer:'9'},
-  {skill:'kenal-nombor',prompt:'Cari nombor 10',visual:'10',options:['9','10','8','7'],answer:'10'},
-  {skill:'urutan',prompt:'Nombor apa yang hilang?',visual:'1  •  2  •  ?  •  4',options:['5','3','2','1'],answer:'3'},
-  {skill:'urutan',prompt:'Nombor apa selepas 5?',visual:'4  •  5  •  ?',options:['5','7','6','4'],answer:'6'},
-  {skill:'urutan',prompt:'Nombor apa sebelum 8?',visual:'?  •  8  •  9',options:['6','9','7','8'],answer:'7'},
-  {skill:'banding',prompt:'Yang mana lebih banyak?',visual:'⭐⭐⭐⭐⭐⭐⭐⭐  vs  ⭐⭐⭐⭐⭐⭐',options:['6','8','7','5'],answer:'8'},
-  {skill:'urutan',prompt:'Lengkapkan urutan',visual:'7  •  8  •  9  •  ?',options:['10','8','11','9'],answer:'10'}
-].map((q,i)=>({...q,level:i+1}));
+const padan_gambar = withLevels([
+  q('padan-sama','match','Cari gambar yang sama','🐶',['🐱','🐶','🐰','🐼'],'🐶','3-4'),
+  q('padan-sama','match','Cari gambar yang sama','🍎',['🍌','🍊','🍎','🍇'],'🍎','3-4'),
+  q('padan-sama','match','Cari gambar yang sama','🚗',['🚲','🚌','🚗','🚂'],'🚗','3-4'),
+  q('ingatan','memory-reveal','Ingat haiwan ini. Mana satu tadi?','🐶  🐱  🐰',['🐰','🍎','🚗','⭐'],'🐰','4-5',{memorySeconds:3}),
+  q('ingatan','memory-reveal','Ingat buah ini. Mana satu tadi?','🍎  🍌  🍊',['🍊','🐟','🚌','👟'],'🍊','4-5',{memorySeconds:3}),
+  q('pasangan','match','Cari pasangan kasut','👟 + ?',['👟','🎩','🧤','👕'],'👟','4-5'),
+  q('kategori','category','Yang mana satu haiwan?','🐶  🐱  🐰',['🐼','🍎','🚗','⭐'],'🐼','4-5'),
+  q('kategori','category','Yang mana satu buah?','🍎  🍌  🍊',['🐟','🍇','🚌','👟'],'🍇','4-5'),
+  q('kategori','category','Yang mana satu kenderaan?','🚗  🚌  🚲',['🚂','🐱','🍎','☁️'],'🚂','4-5'),
+  q('ingatan-susunan','memory-order','Ingat susunan ini','🐶  🍎',['🐶 🍎','🍎 🐶','🐱 🍎','🐶 🍌'],'🐶 🍎','5-6',{memorySeconds:3}),
+  q('ingatan-hilang','memory-reveal','Apa yang hilang?','✏️  📚  🎒',['🎒','🐟','🍌','🚗'],'🎒','5-6',{memorySeconds:3}),
+  q('finale-ingatan','memory-order','🏆 Ingat 3 objek mengikut susunan','🐱  ⭐  🍎',['🐱 ⭐ 🍎','⭐ 🐱 🍎','🍎 ⭐ 🐱','🐱 🍎 ⭐'],'🐱 ⭐ 🍎','5-7',{memorySeconds:4,finale:true})
+]);
 
-const warna_bentuk = [
-  {skill:'warna',prompt:'Pilih warna merah',visual:'🎨',options:['🔴','🔵','🟢','🟡'],answer:'🔴'},
-  {skill:'warna',prompt:'Pilih warna biru',visual:'🎨',options:['🟡','🔵','🟣','🔴'],answer:'🔵'},
-  {skill:'warna',prompt:'Pilih warna hijau',visual:'🎨',options:['🔵','🟢','🟡','🟣'],answer:'🟢'},
-  {skill:'warna',prompt:'Pilih warna kuning',visual:'🎨',options:['🟣','🔴','🟡','🟢'],answer:'🟡'},
-  {skill:'warna',prompt:'Pilih warna ungu',visual:'🎨',options:['🟢','🟣','🔵','🔴'],answer:'🟣'},
-  {skill:'bentuk',prompt:'Pilih bulatan',visual:'🔎 Bentuk',options:['⚪','🔺','◼️','⭐'],answer:'⚪'},
-  {skill:'bentuk',prompt:'Pilih segi tiga',visual:'🔎 Bentuk',options:['⭐','🔺','❤️','⚪'],answer:'🔺'},
-  {skill:'bentuk',prompt:'Pilih segi empat',visual:'🔎 Bentuk',options:['❤️','⚪','◼️','🔺'],answer:'◼️'},
-  {skill:'bentuk',prompt:'Pilih bintang',visual:'🔎 Bentuk',options:['⭐','❤️','⚪','◼️'],answer:'⭐'},
-  {skill:'bentuk',prompt:'Pilih bentuk hati',visual:'🏆 Cabaran bentuk',options:['🔺','❤️','⭐','◼️'],answer:'❤️'}
-].map((q,i)=>({...q,level:i+1}));
+const jigsaw = withLevels([
+  q('corak','sequence','Apa yang datang seterusnya?','🔴  🔵  🔴  ?',['🔵','🟢','🟡','🔴'],'🔵','4-5'),
+  q('corak','sequence','Apa yang datang seterusnya?','⭐  🌙  ⭐  ?',['☁️','🌙','⭐','☀️'],'🌙','4-5'),
+  q('hubungan','logic','Ikan tinggal di...','🐟',['air','pokok','langit','jalan'],'air','4-5'),
+  q('fungsi','logic','Kunci digunakan untuk...','🔑',['buka pintu','makan','melukis','tidur'],'buka pintu','4-5'),
+  q('cantum-kata-bm','word-combine','Cantumkan dua gambar ini','🚗 Kereta  +  🔥 Api',['Kereta api','Kereta air','Api kereta','Kereta panas'],'Kereta api','5-6',{language:'bm'}),
+  q('ejaan-bm','spell-complete','Lengkapkan perkataan','👕  B A _ _',['JU','KU','TU','LU'],'JU','5-6',{language:'bm'}),
+  q('word-combine-en','word-combine','Combine the words','🌧️ RAIN  +  🏹 BOW',['RAINBOW','RAINHOUSE','BOWRAIN','SUNBOW'],'RAINBOW','6-7',{language:'en'}),
+  q('word-combine-en','word-combine','Combine the words','💡 LIGHT  +  🏠 HOUSE',['LIGHTHOUSE','HOUSELIGHT','LIGHTROOM','SUNHOUSE'],'LIGHTHOUSE','6-7',{language:'en'}),
+  q('beza','odd-one','Cari yang berbeza','🍎  🍎  🍌  🍎',['🍌','🍎','🍇','🍊'],'🍌','4-6'),
+  q('finale-logik','sequence','🏆 Lengkapkan cabaran akhir','🔺  ⚪  🔺  ⚪  ?',['🔺','⚪','⭐','◼️'],'🔺','5-7',{finale:true})
+]);
 
-const padan_gambar = [
-  {skill:'padan-sama',prompt:'Cari gambar yang sama',visual:'🐶',options:['🐱','🐶','🐰','🐼'],answer:'🐶'},
-  {skill:'padan-sama',prompt:'Cari gambar yang sama',visual:'🍎',options:['🍌','🍊','🍎','🍇'],answer:'🍎'},
-  {skill:'padan-sama',prompt:'Cari gambar yang sama',visual:'🚗',options:['🚲','🚌','🚗','🚂'],answer:'🚗'},
-  {skill:'padan-sama',prompt:'Cari gambar yang sama',visual:'⭐',options:['🌙','☀️','⭐','☁️'],answer:'⭐'},
-  {skill:'padan-sama',prompt:'Cari gambar yang sama',visual:'👟',options:['🎩','👟','🧦','👕'],answer:'👟'},
-  {skill:'padan-sama',prompt:'Cari gambar yang sama',visual:'✏️',options:['📚','✏️','🎒','📏'],answer:'✏️'},
-  {skill:'kategori',prompt:'Yang mana satu lagi haiwan?',visual:'🐶  🐱  🐰',options:['🐼','🍎','🚗','⭐'],answer:'🐼'},
-  {skill:'kategori',prompt:'Yang mana satu lagi buah?',visual:'🍎  🍌  🍊',options:['🐟','🍇','🚌','👟'],answer:'🍇'},
-  {skill:'kategori',prompt:'Yang mana satu lagi kenderaan?',visual:'🚗  🚌  🚲',options:['🚂','🐱','🍎','☁️'],answer:'🚂'},
-  {skill:'kategori',prompt:'Yang mana hidup di laut?',visual:'🌊',options:['🐠','🐯','🐔','🐰'],answer:'🐠'},
-  {skill:'kategori',prompt:'Yang mana dipakai di kepala?',visual:'👕  👟  🧦  ?',options:['🎩','🍎','🚗','📚'],answer:'🎩'},
-  {skill:'kategori',prompt:'Yang mana barang sekolah?',visual:'🏫 Cabaran akhir',options:['🎒','🐟','🍌','🚗'],answer:'🎒'}
-].map((q,i)=>({...q,level:i+1}));
-
-const jigsaw = [
-  {skill:'corak',prompt:'Apa yang datang seterusnya?',visual:'🔴  🔵  🔴  ?',options:['🔵','🟢','🟡','🔴'],answer:'🔵'},
-  {skill:'corak',prompt:'Apa yang datang seterusnya?',visual:'⭐  🌙  ⭐  ?',options:['☁️','🌙','⭐','☀️'],answer:'🌙'},
-  {skill:'corak',prompt:'Lengkapkan corak',visual:'🐱  🐶  🐱  ?',options:['🐶','🐰','🐼','🐱'],answer:'🐶'},
-  {skill:'pasangan',prompt:'Cari pasangan yang betul',visual:'🧦 + ?',options:['👟','🧦','🎩','🧤'],answer:'🧦'},
-  {skill:'hubungan',prompt:'Bulan biasanya muncul waktu...',visual:'🌙',options:['malam','pagi','tengah hari','petang'],answer:'malam'},
-  {skill:'hubungan',prompt:'Ikan tinggal di...',visual:'🐟',options:['air','pokok','langit','jalan'],answer:'air'},
-  {skill:'fungsi',prompt:'Kasut dipakai pada...',visual:'👟',options:['kaki','kepala','tangan','telinga'],answer:'kaki'},
-  {skill:'fungsi',prompt:'Kunci digunakan untuk...',visual:'🔑',options:['buka pintu','makan','melukis','tidur'],answer:'buka pintu'},
-  {skill:'beza',prompt:'Cari yang berbeza',visual:'🍎  🍎  🍌  🍎',options:['🍌','🍎','🍇','🍊'],answer:'🍌'},
-  {skill:'corak',prompt:'🏆 Lengkapkan cabaran akhir',visual:'🔺  ⚪  🔺  ⚪  ?',options:['🔺','⚪','⭐','◼️'],answer:'🔺'}
-].map((q,i)=>({...q,level:i+1}));
-
-const kira_asas = [
-  {skill:'tambah',prompt:'1 + 1 = ?',visual:'🍎 + 🍎',options:['2','1','3','4'],answer:'2'},
-  {skill:'tambah',prompt:'2 + 1 = ?',visual:'⭐⭐ + ⭐',options:['2','4','3','1'],answer:'3'},
-  {skill:'tambah',prompt:'2 + 2 = ?',visual:'🐟🐟 + 🐟🐟',options:['4','3','5','2'],answer:'4'},
-  {skill:'tambah',prompt:'3 + 1 = ?',visual:'🎈🎈🎈 + 🎈',options:['5','4','3','2'],answer:'4'},
-  {skill:'tambah',prompt:'3 + 2 = ?',visual:'🍊🍊🍊 + 🍊🍊',options:['4','6','5','3'],answer:'5'},
-  {skill:'tolak',prompt:'3 − 1 = ?',visual:'⭐⭐⭐ buang ⭐',options:['2','3','1','4'],answer:'2'},
-  {skill:'tolak',prompt:'4 − 1 = ?',visual:'🍎🍎🍎🍎 buang 🍎',options:['4','2','3','1'],answer:'3'},
-  {skill:'tolak',prompt:'5 − 2 = ?',visual:'🎈🎈🎈🎈🎈 buang 🎈🎈',options:['2','4','3','5'],answer:'3'},
-  {skill:'tolak',prompt:'6 − 3 = ?',visual:'🐟🐟🐟🐟🐟🐟',options:['3','2','4','5'],answer:'3'},
-  {skill:'tolak',prompt:'7 − 2 = ?',visual:'⭐ ⭐ ⭐ ⭐ ⭐ ⭐ ⭐',options:['6','5','4','7'],answer:'5'},
-  {skill:'banding',prompt:'Mana lebih banyak?',visual:'🍎🍎🍎  atau  🍎🍎',options:['3','2','1','4'],answer:'3'},
-  {skill:'banding',prompt:'Mana lebih kecil?',visual:'4  atau  6',options:['4','6','5','3'],answer:'4'},
-  {skill:'nombor-hilang',prompt:'2 + ? = 5',visual:'🧠 Cari nombor hilang',options:['3','2','4','1'],answer:'3'},
-  {skill:'cerita',prompt:'Ada 3 epal. Dapat 2 lagi. Jadi berapa?',visual:'🍎🍎🍎  +  🍎🍎',options:['5','4','6','3'],answer:'5'},
-  {skill:'campuran',prompt:'🏆 Cabaran akhir: 5 − 2 = ?',visual:'🏆',options:['3','2','4','5'],answer:'3'}
-].map((q,i)=>({...q,level:i+1}));
+const kira_asas = withLevels([
+  q('tambah','count-choice','Berapa semuanya?','🍎 + 🍎',['2','1','3','4'],'2','4-5'),
+  q('tambah','count-choice','Berapa semuanya?','⭐⭐ + ⭐',['2','4','3','1'],'3','4-5'),
+  q('tambah','count-choice','2 + 2 = ?','🐟🐟 + 🐟🐟',['4','3','5','2'],'4','4-5'),
+  q('tambah','tap-choice','3 + 1 = ?','🎈🎈🎈 + 🎈',['5','4','3','2'],'4','5-6'),
+  q('tambah','tap-choice','3 + 2 = ?','🍊🍊🍊 + 🍊🍊',['4','6','5','3'],'5','5-6'),
+  q('tolak','count-choice','Ada 3 bintang. 1 hilang. Tinggal berapa?','⭐⭐⭐  ➖  ⭐',['2','3','1','4'],'2','4-5'),
+  q('tolak','count-choice','Ada 4 epal. 1 dimakan. Tinggal berapa?','🍎🍎🍎🍎  ➖  🍎',['4','2','3','1'],'3','4-5'),
+  q('tolak','count-choice','5 belon, 2 terbang. Tinggal berapa?','🎈🎈🎈🎈🎈  ➖  🎈🎈',['2','4','3','5'],'3','5-6'),
+  q('tolak','tap-choice','6 − 3 = ?','6 − 3',['3','2','4','5'],'3','5-6'),
+  q('tolak','tap-choice','7 − 2 = ?','7 − 2',['6','5','4','7'],'5','5-6'),
+  q('banding','compare','Mana lebih banyak?','🍎🍎🍎   atau   🍎🍎',['3','2','1','4'],'3','4-5'),
+  q('banding','compare','Mana lebih kecil?','4   atau   6',['4','6','5','3'],'4','5-6'),
+  q('nombor-hilang','sequence','Cari nombor yang hilang','2 + ? = 5',['3','2','4','1'],'3','6-7'),
+  q('cerita','story-math','Daryl ada 3 epal. Dapat 2 lagi. Berapa semuanya?','🍎🍎🍎  +  🍎🍎',['5','4','6','3'],'5','5-7'),
+  q('finale-matematik','mixed','🏆 Cabaran akhir: 5 − 2 = ?','🏆 5 − 2',['3','2','4','5'],'3','5-7',{finale:true})
+]);
 
 export const QUESTION_BANK = { huruf, nombor, warna_bentuk, padan_gambar, jigsaw, kira_asas };
 
-export function makeChallenge(gameKey, level) {
+export function makeChallenge(gameKey, level, age = 5) {
   const bank = QUESTION_BANK[gameKey] || [];
   const challenge = bank[level - 1];
-  if (challenge) return challenge;
-  return {
-    level,
-    skill: 'fallback',
-    prompt: 'Pilih jawapan yang betul',
-    visual: '🎮',
-    options: ['A','B','C','D'],
-    answer: 'A'
-  };
+  if (challenge) return { ...challenge, playerAge: age };
+  return { level, skill:'fallback', interaction:'tap-choice', prompt:'Pilih jawapan yang betul', visual:'🎮', options:['A','B','C','D'], answer:'A', age:'3-7', playerAge:age };
 }
 
 export function getBankAudit() {
   return Object.fromEntries(Object.entries(QUESTION_BANK).map(([key, bank]) => [key, {
     levels: bank.length,
-    skills: [...new Set(bank.map(q => q.skill))],
-    duplicatePrompts: bank.length - new Set(bank.map(q => `${q.prompt}|${q.visual}`)).size
+    skills: [...new Set(bank.map(x => x.skill))],
+    interactions: [...new Set(bank.map(x => x.interaction))],
+    ageBands: [...new Set(bank.map(x => x.age))],
+    duplicatePrompts: bank.length - new Set(bank.map(x => `${x.prompt}|${x.visual}`)).size
   }]));
 }
