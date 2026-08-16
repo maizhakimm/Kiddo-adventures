@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" role="img" aria-labelledby="title desc">
+  <title id="title">Ular</title>
+  <desc id="desc">Visual pembelajaran Kiddo Adventures level 21</desc>
+  <defs><linearGradient id="bg" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#fff8ec"/><stop offset="1" stop-color="#eaf5ff"/></linearGradient></defs>
+  <rect width="640" height="400" rx="36" fill="url(#bg)"/>
+  <circle cx="86" cy="78" r="46" fill="#d9ed92" opacity=".35"/>
+  <circle cx="552" cy="92" r="58" fill="#80b918" opacity=".18"/>
+  <path d="M0 340 C110 302 196 376 314 340 S510 302 640 342 V400 H0Z" fill="#fff" opacity=".7"/>
+  <ellipse cx="320" cy="300" rx="150" ry="22" fill="#000" opacity=".08"/><path d="M202 270 C230 142 392 148 392 232 C392 320 260 302 286 224 C304 170 420 192 448 132" stroke="#80b918" stroke-width="42" fill="none" stroke-linecap="round"/><circle cx="448" cy="132" r="38" fill="#80b918"/><circle cx="436" cy="124" r="6"/><path d="M474 134 h36" stroke="#ef476f" stroke-width="6" stroke-linecap="round"/>
+  <rect x="36" y="32" width="132" height="104" rx="30" fill="#fff" stroke="#80b918" stroke-width="8"/>
+  <text x="102" y="110" text-anchor="middle" font-family="Arial, sans-serif" font-size="78" font-weight="900" fill="#302d50">U</text>
+  <text x="320" y="374" text-anchor="middle" font-family="Arial, sans-serif" font-size="28" font-weight="800" fill="#514b66">Ular</text>
+</svg>
