@@ -21,6 +21,13 @@ CREATE TABLE IF NOT EXISTS child_profiles (
   FOREIGN KEY (parent_id) REFERENCES parents(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS sessions (
+  token TEXT PRIMARY KEY,
+  parent_id INTEGER NOT NULL,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (parent_id) REFERENCES parents(id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS games (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   game_key TEXT NOT NULL UNIQUE,
@@ -68,6 +75,7 @@ CREATE TABLE IF NOT EXISTS referrals (
 );
 
 CREATE INDEX IF NOT EXISTS idx_child_profiles_parent ON child_profiles(parent_id);
+CREATE INDEX IF NOT EXISTS idx_sessions_parent ON sessions(parent_id);
 CREATE INDEX IF NOT EXISTS idx_progress_child ON game_progress(child_id);
 CREATE INDEX IF NOT EXISTS idx_referrals_agent ON referrals(agent_code);
 CREATE INDEX IF NOT EXISTS idx_referrals_parent ON referrals(parent_id);
