@@ -1,0 +1,25 @@
+/* Kiddo Adventures UI polish — loaded last so it can safely refine legacy styles. */
+.kidHeroActions .parentProgressBtn{margin-top:0}
+.worldCardProgress{position:absolute;left:26px;right:26px;bottom:46px;display:grid;gap:5px}
+.worldCardProgress>span{height:6px;border-radius:999px;background:#ffffffa8;overflow:hidden;box-shadow:inset 0 0 0 1px #00000008}
+.worldCardProgress i{display:block;height:100%;border-radius:inherit;background:#6451af}
+.worldCardProgress small{font-size:9px;font-weight:800;color:#666d7f}
+.dashGrid .worldCard{min-height:300px}
+.dashGrid .worldEmoji{filter:drop-shadow(0 8px 10px #43395a18);transition:transform .2s}
+.dashGrid .worldCard:hover .worldEmoji{transform:scale(1.08) rotate(-4deg)}
+.level-sunset{background:radial-gradient(circle at 10% 90%,#dff3ff 0 5%,transparent 5.5%),radial-gradient(circle at 92% 15%,#fff1bf 0 4%,transparent 4.5%),linear-gradient(180deg,#fff9ec,#fff2df)}
+.levelNodeWrap.completed .levelNode{background:#64b77f;color:#fff;box-shadow:0 6px 0 #3f8f59}
+.levelNodeWrap.completed .levelNode span{font-size:15px;font-weight:900}
+.levelNodeWrap.current .levelNode{animation:currentLevelPulse 1.8s ease-in-out infinite;box-shadow:0 6px 0 color-mix(in srgb,var(--accent),#000 22%),0 0 0 6px #ffffffaa}
+.levelNodeWrap.locked .levelNode{opacity:.72}
+.levelNodeWrap.locked .levelNode span{filter:grayscale(1)}
+.resultOverlay{background:#2927448f;backdrop-filter:blur(6px)}
+@keyframes currentLevelPulse{50%{transform:translateY(-4px) scale(1.04)}}
+@media(prefers-reduced-motion:reduce){.levelNodeWrap.current .levelNode{animation:none}}
+@media(max-width:480px){
+  .dashGrid .worldCard{min-height:166px!important}
+  .worldCardProgress{left:12px;right:12px;bottom:29px;gap:2px}
+  .worldCardProgress>span{height:4px}
+  .worldCardProgress small{font-size:7px}
+  .kidHeroActions .parentProgressBtn{padding:9px 10px;font-size:11px;box-shadow:none}
+}
