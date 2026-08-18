@@ -22,6 +22,34 @@ function genToken() {
   return crypto.randomUUID();
 }
 
+async function ensureSessionsTable(db) {
+  await db.prepare(
+    "CREATE TABLE IF NOT EXISTS sessions (token TEXT PRIMARY KEY, parent_id INTEGER NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (parent_id) REFERENCES parents(id) ON DELETE CASCADE)"
+  ).run();
+  await db.prepare("CREATE INDEX IF NOT EXISTS idx_sessions_parent ON sessions(parent_id)").run();
+}
+
+async function createSession(db, parentId) {
+  await ensureSessionsTable(db);
+  const token = genToken();
+  await db.prepare("INSERT INTO sessions (token, parent_id) VALUES (?, ?)").bind(token, parentId).run();
+  return token;
+}
+
+async function getAuthedParentId(request, db) {
+  const authorization = request.headers.get("Authorization") || "";
+  const match = authorization.match(/^Bearer\s+(.+)$/i);
+  if (!match) return null;
+
+  await ensureSessionsTable(db);
+  const session = await db.prepare("SELECT parent_id FROM sessions WHERE token = ?").bind(match[1]).first();
+  return session?.parent_id ?? null;
+}
+
+async function parentOwnsChild(db, parentId, childId) {
+  return db.prepare("SELECT id FROM child_profiles WHERE id = ? AND parent_id = ?").bind(childId, parentId).first();
+}
+
 function genAgentCode(name) {
   const clean = name.replace(/[^a-zA-Z]/g, "").toUpperCase().slice(0, 6) || "AGENT";
   const rand = Math.floor(1000 + Math.random() * 9000);
@@ -63,7 +91,8 @@ export default {
           }
         }
 
-        return json({ token: genToken(), parent_id: parentId, email, name, subscription_status: "inactive" });
+        const token = await createSession(db, parentId);
+        return json({ token, parent_id: parentId, email, name, subscription_status: "inactive" });
       }
 
       if (path === "/api/login" && request.method === "POST") {
@@ -74,53 +103,62 @@ export default {
           .bind(email, password_hash)
           .first();
         if (!parent) return json({ error: "Email atau password salah" }, 401);
-        return json({ token: genToken(), ...parent });
+        const token = await createSession(db, parent.id);
+        return json({ token, ...parent });
       }
 
-      if (path === "/api/child-profiles" && request.method === "POST") {
-        const { parent_id, name, age, avatar } = await request.json();
-        if (!parent_id || !name || !age) return json({ error: "parent_id, name, age diperlukan" }, 400);
+      const isProtectedParentRoute =
+        path === "/api/child-profiles" ||
+        path.startsWith("/api/child-profiles/") ||
+        path === "/api/progress" ||
+        path === "/api/performance";
+      const authedParentId = isProtectedParentRoute ? await getAuthedParentId(request, db) : null;
+      if (isProtectedParentRoute && !authedParentId) return json({ error: "Unauthorized" }, 401);
 
-        const countRow = await db.prepare("SELECT COUNT(*) as c FROM child_profiles WHERE parent_id = ?").bind(parent_id).first();
+      if (path === "/api/child-profiles" && request.method === "POST") {
+        const { name, age, avatar } = await request.json();
+        if (!name || !age) return json({ error: "name, age diperlukan" }, 400);
+
+        const countRow = await db.prepare("SELECT COUNT(*) as c FROM child_profiles WHERE parent_id = ?").bind(authedParentId).first();
         if (countRow.c >= 5) return json({ error: "Maksimum 5 profil anak sudah dicapai" }, 400);
 
         const chosenAvatar = AVATARS.includes(avatar) ? avatar : AVATARS[countRow.c % AVATARS.length];
 
         const result = await db
           .prepare("INSERT INTO child_profiles (parent_id, name, age, avatar) VALUES (?, ?, ?, ?)")
-          .bind(parent_id, name, age, chosenAvatar)
+          .bind(authedParentId, name, age, chosenAvatar)
           .run();
 
         return json({ id: result.meta.last_row_id, name, age, avatar: chosenAvatar });
       }
 
       if (path === "/api/child-profiles" && request.method === "GET") {
-        const parent_id = url.searchParams.get("parent_id");
-        if (!parent_id) return json({ error: "parent_id diperlukan" }, 400);
         const { results } = await db
           .prepare("SELECT id, name, age, avatar, created_at FROM child_profiles WHERE parent_id = ? ORDER BY created_at ASC")
-          .bind(parent_id)
+          .bind(authedParentId)
           .all();
         return json({ profiles: results });
       }
 
       if (path.startsWith("/api/child-profiles/") && request.method === "PUT") {
         const id = path.split("/").pop();
-        const { parent_id, name, age, avatar } = await request.json();
-        if (!parent_id || !name || !age) return json({ error: "parent_id, name, age diperlukan" }, 400);
+        const { name, age, avatar } = await request.json();
+        if (!name || !age) return json({ error: "name, age diperlukan" }, 400);
         const chosenAvatar = AVATARS.includes(avatar) ? avatar : "panda";
-        const existing = await db.prepare("SELECT id FROM child_profiles WHERE id = ? AND parent_id = ?").bind(id, parent_id).first();
+        const existing = await parentOwnsChild(db, authedParentId, id);
         if (!existing) return json({ error: "Profil anak tidak dijumpai" }, 404);
         await db.prepare("UPDATE child_profiles SET name = ?, age = ?, avatar = ? WHERE id = ? AND parent_id = ?")
-          .bind(name, age, chosenAvatar, id, parent_id)
+          .bind(name, age, chosenAvatar, id, authedParentId)
           .run();
         return json({ updated: true, id: Number(id), name, age, avatar: chosenAvatar });
       }
 
       if (path.startsWith("/api/child-profiles/") && request.method === "DELETE") {
         const id = path.split("/").pop();
+        const existing = await parentOwnsChild(db, authedParentId, id);
+        if (!existing) return json({ error: "Profil anak tidak dijumpai" }, 404);
         await db.prepare("DELETE FROM game_progress WHERE child_id = ?").bind(id).run();
-        await db.prepare("DELETE FROM child_profiles WHERE id = ?").bind(id).run();
+        await db.prepare("DELETE FROM child_profiles WHERE id = ? AND parent_id = ?").bind(id, authedParentId).run();
         return json({ deleted: true });
       }
 
@@ -132,6 +170,7 @@ export default {
       if (path === "/api/progress" && request.method === "GET") {
         const child_id = url.searchParams.get("child_id");
         if (!child_id) return json({ error: "child_id diperlukan" }, 400);
+        if (!(await parentOwnsChild(db, authedParentId, child_id))) return json({ error: "Resource tidak dijumpai" }, 404);
         const { results } = await db.prepare("SELECT * FROM game_progress WHERE child_id = ?").bind(child_id).all();
         return json({ progress: results });
       }
@@ -139,6 +178,7 @@ export default {
       if (path === "/api/progress" && request.method === "POST") {
         const { child_id, game_key, level_reached, stars } = await request.json();
         if (!child_id || !game_key) return json({ error: "child_id, game_key diperlukan" }, 400);
+        if (!(await parentOwnsChild(db, authedParentId, child_id))) return json({ error: "Resource tidak dijumpai" }, 404);
 
         const existing = await db
           .prepare("SELECT id, level_reached, stars FROM game_progress WHERE child_id = ? AND game_key = ?")
@@ -168,6 +208,7 @@ export default {
       if (path === "/api/performance" && request.method === "POST") {
         const { child_id, game_key, level, correct } = await request.json();
         if (!child_id || !game_key || !level) return json({ error: "child_id, game_key, level diperlukan" }, 400);
+        if (!(await parentOwnsChild(db, authedParentId, child_id))) return json({ error: "Resource tidak dijumpai" }, 404);
         await db.prepare("CREATE TABLE IF NOT EXISTS level_results (id INTEGER PRIMARY KEY AUTOINCREMENT, child_id INTEGER NOT NULL, game_key TEXT NOT NULL, level INTEGER NOT NULL, attempts INTEGER NOT NULL DEFAULT 0, correct INTEGER NOT NULL DEFAULT 0, last_correct INTEGER NOT NULL DEFAULT 0, updated_at TEXT DEFAULT CURRENT_TIMESTAMP, UNIQUE(child_id, game_key, level))").run();
         await db.prepare("INSERT INTO level_results (child_id, game_key, level, attempts, correct, last_correct) VALUES (?, ?, ?, 1, ?, ?) ON CONFLICT(child_id, game_key, level) DO UPDATE SET attempts = attempts + 1, correct = MAX(correct, excluded.correct), last_correct = excluded.last_correct, updated_at = CURRENT_TIMESTAMP")
           .bind(child_id, game_key, Number(level), correct ? 1 : 0, correct ? 1 : 0).run();
@@ -178,6 +219,7 @@ export default {
         const child_id = url.searchParams.get("child_id");
         const game_key = url.searchParams.get("game_key");
         if (!child_id) return json({ error: "child_id diperlukan" }, 400);
+        if (!(await parentOwnsChild(db, authedParentId, child_id))) return json({ error: "Resource tidak dijumpai" }, 404);
         await db.prepare("CREATE TABLE IF NOT EXISTS level_results (id INTEGER PRIMARY KEY AUTOINCREMENT, child_id INTEGER NOT NULL, game_key TEXT NOT NULL, level INTEGER NOT NULL, attempts INTEGER NOT NULL DEFAULT 0, correct INTEGER NOT NULL DEFAULT 0, last_correct INTEGER NOT NULL DEFAULT 0, updated_at TEXT DEFAULT CURRENT_TIMESTAMP, UNIQUE(child_id, game_key, level))").run();
         if (game_key) {
           const row = await db.prepare("SELECT game_key, COUNT(*) attempted_levels, COALESCE(SUM(correct),0) correct_levels, COALESCE(SUM(attempts),0) total_attempts FROM level_results WHERE child_id = ? AND game_key = ? GROUP BY game_key").bind(child_id, game_key).first();
